@@ -14,5 +14,5 @@
 ## Task branch workflow
 
 - Execute one task per branch derived from `dev`.
-- Use branch names that include task id when available (for example `feat/123-t-003-pack-budget`).
+- Use branch names that include task id when available (for example `feat/t-003-pack-budget`).
 - Do not mix multiple task scopes in a single branch.
