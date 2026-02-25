@@ -1,8 +1,8 @@
 ---
 id: T-011
 type: task
-title: T-011-pack-precision
-status: active
+title: T-011-feature-precision
+status: todo
 plan_ref: PLAN-MAIN
 priority: p1
 estimate: m
@@ -23,21 +23,22 @@ verification: []
 links: [PLAN-MAIN]
 ---
 
-# Task: T-011-pack-precision
+# Task: T-011-feature-precision
 
 ## Intent
 
-- Reduce pack payload noise while keeping one-call readiness.
+- Ensure all core user-facing features work end-to-end without missing workflow steps.
 
 ## Goal
 
-- Make `task.pack` include only action-ready context for the selected task and required refs.
+- Improve feature completeness and consistency across task pack, record, closeout, and plan/task state transitions.
 
 ## Scope
 
-- tighten context extraction and filtering behavior
-- remove residual legacy selector-path behavior where possible
-- keep deterministic ordering and stable contract shape
+- close functional gaps discovered after T-010 closeout automation
+- ensure all documented tool flows are actually executable
+- unify behavior and error semantics across CLI and MCP paths
+- avoid introducing breaking tool surface changes
 
 ## Context Requirements
 
@@ -45,19 +46,27 @@ links: [PLAN-MAIN]
 
 ## Implementation Approach
 
-- refine candidate building so task execution fields are extracted with less repetition
-- ensure reference-derived snippets are prioritized and deduplicated
-- keep required references strict and optional references budget-aware
-- update architecture/plan docs when pack behavior changes
+- build a feature matrix from architecture/index + plan + tool surface
+- for each feature, verify: command entrypoint, handler coverage, error model, dry-run/apply behavior
+- patch missing transitions or handler gaps before adding new scope
+- keep docs and validation rules aligned with actual runtime behavior
 
 ## Verification Approach
 
-- verify deterministic output across repeated calls
-- verify reduced token usage for same task without missing required checks
-- run: `uv run --extra dev ruff check .`
-- run: `uv run --extra dev mypy .`
-- run: `uv run --extra dev pytest -q`
-- run: `uv run --extra dev python scripts/validate_docs.py`
+- run feature-level scenarios for:
+  - `task.pack`
+  - `task.targets`
+  - `task.record`
+  - `task.complete`
+  - `doc.snippet`
+  - `issue.triage`
+  - `convention.get`
+- verify that each feature has deterministic success/error envelope behavior
+- run:
+  - `uv run --extra dev ruff check .`
+  - `uv run --extra dev mypy .`
+  - `uv run --extra dev pytest -q`
+  - `uv run --extra dev python scripts/validate_docs.py`
 
 ## Implementation Result
 
