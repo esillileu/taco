@@ -18,14 +18,24 @@ def map_cli_to_tool(
     if domain == "task" and action == "list":
         return "task.list", {}
     if domain == "task" and action == "pack":
-        return "task.pack", {"task_id": _required_str(options, "task_id")}
+        payload: dict[str, Any] = {"task_id": _required_str(options, "task_id")}
+        budget_tokens = options.get("budget_tokens")
+        if budget_tokens is not None:
+            if not isinstance(budget_tokens, int):
+                raise CliError(
+                    "invalid_option",
+                    "budget_tokens must be an integer",
+                    {"key": "budget_tokens"},
+                )
+            payload["budget_tokens"] = budget_tokens
+        return "task.pack", payload
     if domain == "task" and action == "targets":
         return "task.targets", {
             "task_id": _required_str(options, "task_id"),
             "route_type": _required_str(options, "route_type"),
         }
     if domain == "task" and action == "record":
-        payload: dict[str, Any] = {
+        record_payload: dict[str, Any] = {
             "task_id": _required_str(options, "task_id"),
             "route_type": _required_str(options, "route_type"),
             "content": _required_str(options, "content"),
@@ -38,8 +48,8 @@ def map_cli_to_tool(
                     "dry_run must be boolean",
                     {"key": "dry_run"},
                 )
-            payload["dry_run"] = dry_run
-        return "task.record", payload
+            record_payload["dry_run"] = dry_run
+        return "task.record", record_payload
     if domain == "doc" and action == "snippet":
         return "doc.snippet", {
             "path": _required_str(options, "path"),
