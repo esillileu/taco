@@ -2,35 +2,47 @@
 id: T-013
 type: task
 title: T-013-build-plan-fallback-state
-status: todo
+status: done
 plan_ref: PLAN-MAIN
 priority: p0
 estimate: m
 scope:
   in:
-    - src/taco/tools.py
-    - src/taco/router.py
-    - src/taco/main.py
-    - tests/test_task_complete.py
-    - tests/test_tools.py
-    - tests/test_integration_mcp_cli.py
+  - src/taco/tools.py
+  - src/taco/router.py
+  - src/taco/main.py
+  - tests/test_task_complete.py
+  - tests/test_tools.py
+  - tests/test_integration_mcp_cli.py
   out:
-    - 자동 태스크 분해/생성 엔진
-    - 외부 이슈 트래커 연동
+  - "\uC790\uB3D9 \uD0DC\uC2A4\uD06C \uBD84\uD574/\uC0DD\uC131 \uC5D4\uC9C4"
+  - "\uC678\uBD80 \uC774\uC288 \uD2B8\uB798\uCEE4 \uC5F0\uB3D9"
 references:
-  modules: [MOD-TOOLS-DISPATCH, MOD-ROUTER, MOD-MAIN]
-  flows: [FLOW-MODE-TRANSITION, FLOW-TASK-RECORD]
-  schemas: [SCH-TASK-NODE, SCH-TOOL-ERROR, SCH-TOOL-ENVELOPE]
-  governance: [GOV-CODE-PRINCIPLES]
+  modules:
+  - MOD-TOOLS-DISPATCH
+  - MOD-ROUTER
+  - MOD-MAIN
+  flows:
+  - FLOW-MODE-TRANSITION
+  - FLOW-TASK-RECORD
+  schemas:
+  - SCH-TASK-NODE
+  - SCH-TOOL-ERROR
+  - SCH-TOOL-ENVELOPE
+  governance:
+  - GOV-CODE-PRINCIPLES
 deliverables:
-  - build->plan fallback 표준 상태/에러 계약
-  - blocked 전환 및 기록 API/CLI 경로
-  - fallback 시 plan 반영 규칙 테스트
+- "build->plan fallback \uD45C\uC900 \uC0C1\uD0DC/\uC5D0\uB7EC \uACC4\uC57D"
+- "blocked \uC804\uD658 \uBC0F \uAE30\uB85D API/CLI \uACBD\uB85C"
+- "fallback \uC2DC plan \uBC18\uC601 \uADDC\uCE59 \uD14C\uC2A4\uD2B8"
 verification:
-  - uv run --extra dev pytest -q
-  - uv run --extra dev ruff check .
-  - uv run --extra dev mypy .
-links: [PLAN-MAIN, FLOW-MODE-TRANSITION, ARCH-INDEX]
+- uv run --extra dev pytest -q
+- uv run --extra dev ruff check .
+- uv run --extra dev mypy .
+links:
+- PLAN-MAIN
+- FLOW-MODE-TRANSITION
+- ARCH-INDEX
 ---
 
 # Task: T-013-build-plan-fallback-state
@@ -85,6 +97,10 @@ links: [PLAN-MAIN, FLOW-MODE-TRANSITION, ARCH-INDEX]
 
 - Pending (do not fill until the task is completed)
 
+- Implemented build->plan fallback with new task.block flow, reason-code validation, blocked status transition, and plan blocked_tasks synchronization
+- fallback flow implemented
 ## Verification Result
 
 - Pending (do not fill until the task is completed)
+- Validated via CLI dry-run/error paths and full ruff+mypy+pytest+doc-validation pass; added integration and unit coverage for block behavior
+- tooling and tests passed

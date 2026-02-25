@@ -97,6 +97,8 @@ Architecture anchor for modules, flows, and schemas. This document is global SSO
 - `task.pack`
 - `task.targets`
 - `task.record`
+- `task.complete`
+- `task.block`
 - `doc.snippet`
 - `issue.triage`
 - `convention.get`

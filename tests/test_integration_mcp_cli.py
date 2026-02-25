@@ -211,6 +211,16 @@ def test_integration_happy_path_for_all_tools(tmp_path: Path) -> None:
     )["ok"] is True
     assert call_tool(
         state,
+        "task.block",
+        {
+            "task_id": "T-006",
+            "reason_code": "scope_split_required",
+            "reason": "needs split before continue",
+            "dry_run": True,
+        },
+    )["ok"] is True
+    assert call_tool(
+        state,
         "doc.snippet",
         {"path": "docs/architecture.md", "anchor_id": "system"},
     )["ok"] is True
@@ -268,5 +278,28 @@ def test_cli_mapping_parity_with_mcp_calls(tmp_path: Path) -> None:
         state,
         "doc.snippet",
         {"path": "docs/architecture.md", "anchor_id": "system"},
+    )
+    assert cli_result == mcp_result
+
+    tool_name, payload = map_cli_to_tool(
+        "task",
+        "block",
+        {
+            "task_id": "T-006",
+            "reason_code": "verification_ambiguous",
+            "reason": "checklist unclear",
+            "dry_run": True,
+        },
+    )
+    cli_result = call_tool(state, tool_name, payload)
+    mcp_result = call_tool(
+        state,
+        "task.block",
+        {
+            "task_id": "T-006",
+            "reason_code": "verification_ambiguous",
+            "reason": "checklist unclear",
+            "dry_run": True,
+        },
     )
     assert cli_result == mcp_result
