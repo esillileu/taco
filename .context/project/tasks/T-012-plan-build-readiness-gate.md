@@ -2,36 +2,51 @@
 id: T-012
 type: task
 title: T-012-plan-build-readiness-gate
-status: todo
+status: done
 plan_ref: PLAN-MAIN
 priority: p0
 estimate: m
 scope:
   in:
-    - src/taco/tools.py
-    - src/taco/pack.py
-    - src/taco/cli.py
-    - src/taco/main.py
-    - tests/test_tools.py
-    - tests/test_cli_main.py
-    - tests/test_integration_mcp_cli.py
+  - src/taco/tools.py
+  - src/taco/pack.py
+  - src/taco/cli.py
+  - src/taco/main.py
+  - tests/test_tools.py
+  - tests/test_cli_main.py
+  - tests/test_integration_mcp_cli.py
   out:
-    - 신규 MCP transport 구현
-    - 문서 구조 대규모 개편
+  - "\uC2E0\uADDC MCP transport \uAD6C\uD604"
+  - "\uBB38\uC11C \uAD6C\uC870 \uB300\uADDC\uBAA8 \uAC1C\uD3B8"
 references:
-  modules: [MOD-TOOLS-DISPATCH, MOD-PACK, MOD-CLI-MAPPER, MOD-MAIN]
-  flows: [FLOW-MODE-TRANSITION, FLOW-TOOL-DISPATCH, FLOW-TASK-PACK]
-  schemas: [SCH-TASK-NODE, SCH-PACK-RESULT, SCH-TOOL-ENVELOPE, SCH-TOOL-ERROR]
-  governance: [GOV-CODE-PRINCIPLES]
+  modules:
+  - MOD-TOOLS-DISPATCH
+  - MOD-PACK
+  - MOD-CLI-MAPPER
+  - MOD-MAIN
+  flows:
+  - FLOW-MODE-TRANSITION
+  - FLOW-TOOL-DISPATCH
+  - FLOW-TASK-PACK
+  schemas:
+  - SCH-TASK-NODE
+  - SCH-PACK-RESULT
+  - SCH-TOOL-ENVELOPE
+  - SCH-TOOL-ERROR
+  governance:
+  - GOV-CODE-PRINCIPLES
 deliverables:
-  - plan->build readiness 판정 함수와 에러 코드
-  - task.pack 호출 전 readiness 검증 경로
-  - readiness 실패/성공 테스트 케이스
+- "plan->build readiness \uD310\uC815 \uD568\uC218\uC640 \uC5D0\uB7EC \uCF54\uB4DC"
+- "task.pack \uD638\uCD9C \uC804 readiness \uAC80\uC99D \uACBD\uB85C"
+- "readiness \uC2E4\uD328/\uC131\uACF5 \uD14C\uC2A4\uD2B8 \uCF00\uC774\uC2A4"
 verification:
-  - uv run --extra dev pytest -q
-  - uv run --extra dev ruff check .
-  - uv run --extra dev mypy .
-links: [PLAN-MAIN, FLOW-MODE-TRANSITION, ARCH-INDEX]
+- uv run --extra dev pytest -q
+- uv run --extra dev ruff check .
+- uv run --extra dev mypy .
+links:
+- PLAN-MAIN
+- FLOW-MODE-TRANSITION
+- ARCH-INDEX
 ---
 
 # Task: T-012-plan-build-readiness-gate
@@ -89,7 +104,9 @@ links: [PLAN-MAIN, FLOW-MODE-TRANSITION, ARCH-INDEX]
 - Pending (do not fill until the task is completed)
 
 - Added task.pack readiness gate: validates task front matter shape, required task headings, non-empty module/flow/schema references, and verification criteria before pack assembly
+- readiness gate implemented and merged
 ## Verification Result
 
 - Pending (do not fill until the task is completed)
 - Verified with ruff/mypy/pytest/doc-validation; added regression tests for task_not_ready failures and updated CLI/integration fixtures to front matter id-based references
+- ruff mypy pytest validate_docs passed
