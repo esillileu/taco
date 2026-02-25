@@ -46,8 +46,35 @@
 
 ## Implementation Result
 
-- Pending (do not fill until the task is completed)
+- Added indexer foundation module at `src/taco/indexer.py`.
+- Implemented deterministic index DTO model:
+  - `IndexConfig`, `DocumentInput`, `HeadingRef`, `IndexedDocument`, `IndexGraph`
+- Implemented config-driven indexing primitives:
+  - `IndexConfig.from_dict()` for loading path/glob rules
+  - doc classification by config paths and task glob
+  - task id extraction from task document paths
+- Implemented link graph and heading lookup generation:
+  - local markdown link extraction
+  - heading key format `<path>#<anchor_id>`
+- Implemented I/O-separated adapter functions:
+  - `scan_markdown_files(root)` for markdown discovery
+  - `load_documents(root, paths)` for file loading
+  - pure `build_index(documents, config)` core assembly
+- Implemented standardized indexer error model:
+  - `IndexerError(code, message, details)`
+  - missing required SSOT docs and invalid config validation
 
 ## Verification Result
 
-- Pending (do not fill until the task is completed)
+- Added indexer behavior tests in `tests/test_indexer.py` covering:
+  - doc classification and task index generation
+  - local link extraction graph
+  - required-doc validation failure behavior
+  - stable markdown scan ordering
+  - file load adapter behavior
+  - config override behavior
+  - `IndexedDocument.to_dict()` contract shape
+- Verification commands:
+  - `uv run --extra dev ruff check .` -> pass
+  - `uv run --extra dev mypy .` -> pass
+  - `uv run --extra dev pytest -q` -> pass
