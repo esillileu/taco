@@ -115,6 +115,7 @@ def _state(tmp_path: Path) -> RepoState:
             ),
         ),
         router_config=RouterConfig.default(),
+        common_required_refs=(),
     )
 
 

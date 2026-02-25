@@ -14,10 +14,10 @@ def test_no_stale_tool_names_in_active_docs() -> None:
     targets = [
         "README.md",
         "AGENTS.md",
-        "docs/intent.md",
-        "docs/architecture.md",
-        "docs/dev/docs.md",
-        "docs/dev/tasks/T-005-mcp-tools.md",
+        ".context/project/overview.md",
+        ".context/project/architecture/index.md",
+        ".context/governance/doc/index.md",
+        ".context/project/tasks/T-005-mcp-tools.md",
     ]
     stale_patterns = [
         r"\btasks\.(list|get_pack|write_targets|record)\b",
@@ -33,14 +33,16 @@ def test_no_stale_tool_names_in_active_docs() -> None:
 
 def test_no_placeholder_markers_in_active_task_plans() -> None:
     for task_id in range(1, 8):
-        text = _read(f"docs/dev/tasks/T-{task_id:03d}-" + _task_slug(task_id) + ".md")
+        text = _read(
+            f".context/project/tasks/T-{task_id:03d}-" + _task_slug(task_id) + ".md"
+        )
         assert "TBD" not in text
         assert "Planning placeholder" not in text
 
 
 def test_architecture_and_principles_reflect_runtime_strategy() -> None:
-    architecture = _read("docs/architecture.md")
-    principles = _read("docs/dev/principles.md")
+    architecture = _read(".context/project/architecture/index.md")
+    principles = _read(".context/governance/code-principles.md")
 
     assert "Python" in architecture
     assert "Rust" in architecture
@@ -49,9 +51,9 @@ def test_architecture_and_principles_reflect_runtime_strategy() -> None:
 
 
 def test_dogfooding_policy_is_explicitly_documented() -> None:
-    architecture = _read("docs/architecture.md")
-    principles = _read("docs/dev/principles.md")
-    assert "Dogfooding" in architecture
+    architecture = _read(".context/project/architecture/index.md")
+    principles = _read(".context/governance/code-principles.md")
+    assert "flow" in architecture.lower()
     assert "dogfooding" in principles.lower()
 
 

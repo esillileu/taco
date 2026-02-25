@@ -86,6 +86,7 @@ def test_section_slice_to_dict_contract() -> None:
         "heading": "Alpha",
         "anchor_id": "alpha",
         "pack_groups": (),
+        "ref_ids": (),
         "start_line": 1,
         "end_line": 1,
     }
@@ -101,3 +102,16 @@ def test_parse_markdown_sections_extracts_pack_groups() -> None:
     )
     section = parse_markdown_sections("docs/sample.md", text)[0]
     assert section.pack_groups == ("task.core", "pack.next_actions")
+
+
+def test_parse_markdown_sections_extracts_ref_ids() -> None:
+    text = "\n".join(
+        [
+            "## System Boundary",
+            "<!-- taco:ref=ARCH-BOUNDARY-001 -->",
+            "<!-- taco:ref=ARCH-BOUNDARY-002 -->",
+            "content",
+        ]
+    )
+    section = parse_markdown_sections("docs/sample.md", text)[0]
+    assert section.ref_ids == ("ARCH-BOUNDARY-001", "ARCH-BOUNDARY-002")

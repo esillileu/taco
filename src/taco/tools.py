@@ -24,6 +24,7 @@ class RepoState:
     index: IndexGraph
     budget_config: BudgetConfig
     router_config: RouterConfig
+    common_required_refs: tuple[str, ...]
 
 
 class ToolError(ValueError):
@@ -46,10 +47,11 @@ def load_repo_state(root: Path, config_path: Path | None = None) -> RepoState:
     router_config = RouterConfig.from_dict(raw)
 
     markdown_paths = scan_markdown_files(root)
+    prefixes = _collect_doc_prefixes(raw)
     rel_paths = [
         path.relative_to(root).as_posix()
         for path in markdown_paths
-        if path.relative_to(root).as_posix().startswith("docs/")
+        if _should_include_path(path.relative_to(root).as_posix(), prefixes)
     ]
     documents = load_documents(root, rel_paths)
     index = build_index(documents, index_config)
@@ -60,6 +62,7 @@ def load_repo_state(root: Path, config_path: Path | None = None) -> RepoState:
         index=index,
         budget_config=budget_config,
         router_config=router_config,
+        common_required_refs=_load_common_required_refs(raw),
     )
 
 
@@ -107,7 +110,12 @@ def _task_pack(state: RepoState, args: dict[str, Any]) -> dict[str, Any]:
             priority_order=state.budget_config.priority_order,
             required_groups=state.budget_config.required_groups,
         )
-    result = build_task_pack(task_id, state.index, budget_config)
+    result = build_task_pack(
+        task_id,
+        state.index,
+        budget_config,
+        common_required_refs=state.common_required_refs,
+    )
     return result.to_dict()
 
 
@@ -198,9 +206,9 @@ def _convention_get(state: RepoState, args: dict[str, Any]) -> dict[str, Any]:
     else:
         git_cfg = {}
     if isinstance(git_cfg, dict):
-        git_path = git_cfg.get("path", "docs/dev/git.md")
+        git_path = git_cfg.get("path", ".context/governance/git/index.md")
     else:
-        git_path = "docs/dev/git.md"
+        git_path = ".context/governance/git/index.md"
     return {
         "topic": "git",
         "path": git_path,
@@ -262,3 +270,59 @@ def _error(code: str, message: str, details: dict[str, Any]) -> dict[str, Any]:
             "details": details,
         },
     }
+
+
+def _load_common_required_refs(raw: dict[str, Any]) -> tuple[str, ...]:
+    pack = raw.get("pack", {})
+    if not isinstance(pack, dict):
+        return ()
+    values = pack.get("common_required_refs", [])
+    if not isinstance(values, list):
+        return ()
+    ref_ids: list[str] = []
+    for item in values:
+        if not isinstance(item, str):
+            continue
+        value = item.strip()
+        if value and value not in ref_ids:
+            ref_ids.append(value)
+    return tuple(ref_ids)
+
+
+def _collect_doc_prefixes(raw: dict[str, Any]) -> tuple[str, ...]:
+    docs = raw.get("docs", {})
+    if not isinstance(docs, dict):
+        return (".context/",)
+
+    raw_paths: list[str] = []
+    for key in ("intent", "architecture", "plan", "glossary", "doc_map", "tasks_glob"):
+        value = docs.get(key)
+        if isinstance(value, str):
+            raw_paths.append(value)
+    for key in ("principles", "todo"):
+        value = docs.get(key, [])
+        if isinstance(value, list):
+            raw_paths.extend(item for item in value if isinstance(item, str))
+
+    prefixes: list[str] = []
+    for item in raw_paths:
+        cleaned = item.split("*", 1)[0].strip("/")
+        if not cleaned:
+            continue
+        if "." in cleaned.split("/")[-1]:
+            cleaned = "/".join(cleaned.split("/")[:-1])
+        if not cleaned:
+            continue
+        prefix = f"{cleaned}/"
+        if prefix not in prefixes:
+            prefixes.append(prefix)
+
+    if not prefixes:
+        return (".context/",)
+    return tuple(prefixes)
+
+
+def _should_include_path(path: str, prefixes: tuple[str, ...]) -> bool:
+    if path.startswith(".git/"):
+        return False
+    return any(path.startswith(prefix) for prefix in prefixes)

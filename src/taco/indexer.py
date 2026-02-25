@@ -4,6 +4,9 @@ import re
 from dataclasses import asdict, dataclass
 from fnmatch import fnmatch
 from pathlib import Path
+from typing import Any
+
+import yaml
 
 from taco.parser import SectionSlice, parse_markdown_sections
 
@@ -76,6 +79,7 @@ class HeadingRef:
     heading: str
     anchor_id: str
     pack_groups: tuple[str, ...]
+    ref_ids: tuple[str, ...]
     start_line: int
     end_line: int
 
@@ -88,6 +92,9 @@ class IndexedDocument:
     path: str
     doc_type: str
     task_id: str | None
+    node_id: str | None
+    node_type: str | None
+    metadata: dict[str, Any]
     headings: tuple[HeadingRef, ...]
     links: tuple[str, ...]
 
@@ -96,6 +103,8 @@ class IndexedDocument:
             "path": self.path,
             "doc_type": self.doc_type,
             "task_id": self.task_id,
+            "node_id": self.node_id,
+            "node_type": self.node_type,
             "headings": [heading.to_dict() for heading in self.headings],
             "links": list(self.links),
         }
@@ -105,8 +114,10 @@ class IndexedDocument:
 class IndexGraph:
     documents: tuple[IndexedDocument, ...]
     task_index: dict[str, str]
+    node_index: dict[str, str]
     link_graph: dict[str, tuple[str, ...]]
     heading_lookup: dict[str, HeadingRef]
+    reference_lookup: dict[str, str]
     document_texts: dict[str, str]
 
 
@@ -138,14 +149,32 @@ def build_index(documents: list[DocumentInput], config: IndexConfig) -> IndexGra
 
     indexed_docs: list[IndexedDocument] = []
     task_index: dict[str, str] = {}
+    node_index: dict[str, str] = {}
     link_graph: dict[str, tuple[str, ...]] = {}
     heading_lookup: dict[str, HeadingRef] = {}
+    reference_lookup: dict[str, str] = {}
 
     for doc in sorted_docs:
         doc_type = _classify_doc_type(doc.path, config)
+        metadata = _extract_front_matter(doc.text)
+        node_id = metadata.get("id") if isinstance(metadata.get("id"), str) else None
+        node_type = (
+            metadata.get("type") if isinstance(metadata.get("type"), str) else None
+        )
+        if node_type:
+            doc_type = node_type
         task_id = _extract_task_id(doc.path)
         if task_id:
             task_index[task_id] = doc.path
+        if node_id:
+            existing = node_index.get(node_id)
+            if existing:
+                raise IndexerError(
+                    code="duplicate_node_id",
+                    message="document id must be unique",
+                    details={"id": node_id, "first": existing, "second": doc.path},
+                )
+            node_index[node_id] = doc.path
 
         headings = tuple(
             HeadingRef(
@@ -153,6 +182,7 @@ def build_index(documents: list[DocumentInput], config: IndexConfig) -> IndexGra
                 heading=section.heading,
                 anchor_id=section.anchor_id,
                 pack_groups=section.pack_groups,
+                ref_ids=section.ref_ids,
                 start_line=section.start_line,
                 end_line=section.end_line,
             )
@@ -161,13 +191,26 @@ def build_index(documents: list[DocumentInput], config: IndexConfig) -> IndexGra
         links = tuple(_extract_local_links(doc.text))
         link_graph[doc.path] = links
         for heading in headings:
-            heading_lookup[f"{doc.path}#{heading.anchor_id}"] = heading
+            key = f"{doc.path}#{heading.anchor_id}"
+            heading_lookup[key] = heading
+            for ref_id in heading.ref_ids:
+                existing = reference_lookup.get(ref_id)
+                if existing:
+                    raise IndexerError(
+                        code="duplicate_reference_id",
+                        message="reference id must be unique",
+                        details={"ref_id": ref_id, "first": existing, "second": key},
+                    )
+                reference_lookup[ref_id] = key
 
         indexed_docs.append(
             IndexedDocument(
                 path=doc.path,
                 doc_type=doc_type,
                 task_id=task_id,
+                node_id=node_id,
+                node_type=node_type,
+                metadata=metadata,
                 headings=headings,
                 links=links,
             )
@@ -176,8 +219,10 @@ def build_index(documents: list[DocumentInput], config: IndexConfig) -> IndexGra
     return IndexGraph(
         documents=tuple(indexed_docs),
         task_index=task_index,
+        node_index=node_index,
         link_graph=link_graph,
         heading_lookup=heading_lookup,
+        reference_lookup=reference_lookup,
         document_texts={doc.path: doc.text for doc in sorted_docs},
     )
 
@@ -239,7 +284,7 @@ def _classify_doc_type(path: str, config: IndexConfig) -> str:
         return "git"
     if fnmatch(path, config.tasks_glob):
         return "task"
-    if path.startswith("docs/dev/git/"):
+    if path.startswith(".context/governance/git/"):
         return "git-detail"
     return "doc"
 
@@ -262,3 +307,23 @@ def _extract_local_links(text: str) -> list[str]:
             continue
         links.append(link)
     return links
+
+
+def _extract_front_matter(text: str) -> dict[str, Any]:
+    lines = text.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return {}
+    end = -1
+    for idx in range(1, len(lines)):
+        if lines[idx].strip() == "---":
+            end = idx
+            break
+    if end < 0:
+        return {}
+    raw = "\n".join(lines[1:end]).strip()
+    if not raw:
+        return {}
+    loaded = yaml.safe_load(raw)
+    if not isinstance(loaded, dict):
+        return {}
+    return loaded

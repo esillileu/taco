@@ -58,6 +58,9 @@ def _build_graph():
                     "- run parser",
                     "- build index",
                     "scope detail",
+                    "## Context Requirements",
+                    "- required: ARCH-SYSTEM-001, PLAN-PHASE-001, PRINCIPLES-RULES-001",
+                    "- optional: GLOSSARY-TERM-001",
                     "## Implementation Approach",
                     "<!-- taco:pack=task.plans,pack.next_actions -->",
                     "1. implement candidate assembly",
@@ -81,6 +84,7 @@ def _build_graph():
                 [
                     "# Architecture",
                     "## System",
+                    "<!-- taco:ref=ARCH-SYSTEM-001 -->",
                     "<!-- taco:pack=arch.snippets -->",
                     "arch system detail",
                     "## Pipeline",
@@ -95,6 +99,7 @@ def _build_graph():
                 [
                     "# Plan",
                     "## Phase 1",
+                    "<!-- taco:ref=PLAN-PHASE-001 -->",
                     "<!-- taco:pack=plan.snippets -->",
                     "plan phase detail",
                 ]
@@ -106,6 +111,7 @@ def _build_graph():
                 [
                     "# Principles",
                     "## Rules",
+                    "<!-- taco:ref=PRINCIPLES-RULES-001 -->",
                     "<!-- taco:pack=principles.snippets -->",
                     "principles detail",
                     "## Design",
@@ -120,6 +126,7 @@ def _build_graph():
                 [
                     "# Glossary",
                     "## Term",
+                    "<!-- taco:ref=GLOSSARY-TERM-001 -->",
                     "<!-- taco:pack=glossary.terms -->",
                     "term detail",
                 ]
@@ -138,6 +145,11 @@ def test_build_task_pack_constructs_for_valid_task() -> None:
     groups = [item.group for item in result.context_snippets]
     assert "task.core" in groups
     assert "task.plans" in groups
+    assert any(item.path == "docs/architecture.md" for item in result.context_snippets)
+    assert any(item.path == "docs/plan.md" for item in result.context_snippets)
+    assert any(
+        item.path == "docs/dev/principles.md" for item in result.context_snippets
+    )
     assert len(result.next_actions) > 0
     assert len(result.acceptance_checks) > 0
     assert len(result.verification_commands) > 0
@@ -188,6 +200,8 @@ def test_build_task_pack_uses_task_heading_fallback_without_selectors() -> None:
                     "goal detail",
                     "## Scope",
                     "- run parser",
+                    "## Context Requirements",
+                    "- required: ARCH-MISSING-001",
                     "## Implementation Approach",
                     "1. implement candidate assembly",
                     "## Verification Approach",
@@ -202,11 +216,21 @@ def test_build_task_pack_uses_task_heading_fallback_without_selectors() -> None:
         ),
     ]
     graph = build_index(docs, _index_config())
+    with pytest.raises(PackError) as exc:
+        build_task_pack("T-003", graph, _budget(default_tokens=200))
+    assert exc.value.code == "pack_not_ready"
+    assert exc.value.details.get("missing_refs") == "ARCH-MISSING-001"
+
+
+def test_build_task_pack_resolves_context_requirement_refs() -> None:
+    graph = _build_graph()
     result = build_task_pack("T-003", graph, _budget(default_tokens=200))
-    assert len(result.context_snippets) > 0
-    assert "task_heading_fallback" in {item.reason for item in result.context_snippets}
-    assert len(result.next_actions) > 0
-    assert len(result.verification_commands) > 0
+    ref_reasons = [
+        item.reason
+        for item in result.context_snippets
+        if item.reason == "context_requirement"
+    ]
+    assert len(ref_reasons) >= 3
 
 
 def test_build_task_pack_respects_budget_boundaries() -> None:

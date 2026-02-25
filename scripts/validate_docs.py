@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 from pathlib import Path
 from typing import Any
 
@@ -8,98 +7,182 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG_PATH = ROOT / "taco.yaml"
+ALLOWED_TYPES = {"anchor", "module", "flow", "schema", "task", "plan", "governance"}
+COMMON_REQUIRED = ("id", "type", "title", "status")
+TASK_STATUS = {"todo", "active", "done", "blocked"}
 
 
 def load_config() -> dict[str, Any]:
     if not CONFIG_PATH.exists():
         return {}
-    return yaml.safe_load(CONFIG_PATH.read_text(encoding="utf-8")) or {}
+    loaded = yaml.safe_load(CONFIG_PATH.read_text(encoding="utf-8")) or {}
+    if not isinstance(loaded, dict):
+        return {}
+    return loaded
 
 
-def get_task_files(config: dict[str, Any]) -> list[Path]:
-    pattern = config.get("docs", {}).get("tasks_glob", "docs/dev/tasks/T-*.md")
-    return sorted(ROOT.glob(pattern))
+def all_context_docs() -> list[Path]:
+    return sorted((ROOT / ".context").rglob("*.md"))
 
 
-def get_todo_files(config: dict[str, Any]) -> list[Path]:
-    rels = config.get("docs", {}).get("todo", ["docs/dev/todo.md"])
-    files: list[Path] = []
-    for rel in rels:
-        p = ROOT / rel
-        if p.exists():
-            files.append(p)
-    return files
+def parse_front_matter(path: Path) -> tuple[dict[str, Any], str]:
+    text = path.read_text(encoding="utf-8")
+    lines = text.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return {}, ""
+    end = -1
+    for idx in range(1, len(lines)):
+        if lines[idx].strip() == "---":
+            end = idx
+            break
+    if end < 0:
+        return {}, ""
+    raw = "\n".join(lines[1:end]).strip()
+    body = "\n".join(lines[end + 1 :])
+    if not raw:
+        return {}, body
+    parsed = yaml.safe_load(raw)
+    if not isinstance(parsed, dict):
+        return {}, body
+    return parsed, body
 
 
-def get_required_headings(config: dict[str, Any]) -> list[str]:
-    return config.get("parsing", {}).get(
-        "task_required_headings",
-        [
-            "Intent",
-            "Goal",
-            "Scope",
-            "Implementation Approach",
-            "Verification Approach",
-            "Implementation Result",
-            "Verification Result",
-        ],
-    )
-
-
-def validate_task_headings(task_files: list[Path], required: list[str]) -> list[str]:
+def validate_front_matter(
+    files: list[Path],
+) -> tuple[list[str], dict[str, Path], dict[str, dict[str, Any]]]:
     errors: list[str] = []
-    required_markers = [f"## {h}" for h in required]
-    for task_file in task_files:
-        text = task_file.read_text(encoding="utf-8")
-        missing = [h for h in required_markers if h not in text]
+    id_to_path: dict[str, Path] = {}
+    fm_by_path: dict[str, dict[str, Any]] = {}
+
+    for path in files:
+        fm, _ = parse_front_matter(path)
+        rel = path.relative_to(ROOT).as_posix()
+        fm_by_path[rel] = fm
+        if not fm:
+            errors.append(f"{rel}: missing or invalid front matter")
+            continue
+
+        missing = [key for key in COMMON_REQUIRED if key not in fm]
         if missing:
-            errors.append(f"{task_file}: missing headings {missing}")
+            errors.append(f"{rel}: missing required fields {missing}")
+            continue
+
+        node_id = fm.get("id")
+        node_type = fm.get("type")
+        status = fm.get("status")
+        if not isinstance(node_id, str) or not node_id.strip():
+            errors.append(f"{rel}: id must be non-empty string")
+            continue
+        if not isinstance(node_type, str) or node_type not in ALLOWED_TYPES:
+            errors.append(f"{rel}: type must be one of {sorted(ALLOWED_TYPES)}")
+            continue
+        if not isinstance(status, str) or not status.strip():
+            errors.append(f"{rel}: status must be non-empty string")
+            continue
+        if node_type == "task" and status not in TASK_STATUS:
+            errors.append(f"{rel}: task status must be one of {sorted(TASK_STATUS)}")
+
+        existing = id_to_path.get(node_id)
+        if existing:
+            errors.append(
+                "duplicate id "
+                f"{node_id}: {existing.relative_to(ROOT).as_posix()} and {rel}"
+            )
+        else:
+            id_to_path[node_id] = path
+
+    return errors, id_to_path, fm_by_path
+
+
+def _collect_ref_ids(value: Any) -> list[str]:
+    refs: list[str] = []
+    if isinstance(value, list):
+        for item in value:
+            if isinstance(item, str) and item.strip():
+                refs.append(item.strip())
+    return refs
+
+
+def validate_references(
+    id_to_path: dict[str, Path], fm_by_path: dict[str, dict[str, Any]]
+) -> list[str]:
+    errors: list[str] = []
+    known = set(id_to_path)
+    for rel, fm in fm_by_path.items():
+        if not fm:
+            continue
+        refs: list[str] = []
+        refs.extend(_collect_ref_ids(fm.get("links")))
+
+        if fm.get("type") == "task":
+            plan_ref = fm.get("plan_ref")
+            if isinstance(plan_ref, str) and plan_ref.strip():
+                refs.append(plan_ref.strip())
+            scope = fm.get("scope")
+            if not isinstance(scope, dict) or "in" not in scope or "out" not in scope:
+                errors.append(f"{rel}: task requires scope.in and scope.out")
+            references = fm.get("references")
+            if not isinstance(references, dict):
+                errors.append(f"{rel}: task requires references object")
+            else:
+                for key in ("modules", "flows", "schemas", "governance"):
+                    refs.extend(_collect_ref_ids(references.get(key)))
+
+        if fm.get("type") == "plan":
+            refs.extend(_collect_ref_ids(fm.get("active_tasks")))
+            refs.extend(_collect_ref_ids(fm.get("blocked_tasks")))
+            refs.extend(_collect_ref_ids(fm.get("next_tasks")))
+
+        for ref_id in refs:
+            if ref_id not in known:
+                errors.append(f"{rel}: unresolved reference id {ref_id}")
     return errors
 
 
-def validate_todo_links(todo_files: list[Path]) -> tuple[list[str], set[str]]:
+def validate_config_paths(config: dict[str, Any]) -> list[str]:
     errors: list[str] = []
-    task_links: set[str] = set()
-    for todo in todo_files:
-        text = todo.read_text(encoding="utf-8")
-        links = re.findall(r"\[[^\]]+\]\(([^)]+)\)", text)
-        for rel in links:
-            if rel.startswith("http") or rel.startswith("#"):
-                continue
-            path = (todo.parent / rel).resolve()
+    docs = config.get("docs", {})
+    if not isinstance(docs, dict):
+        return ["taco.yaml: docs must be mapping"]
+
+    required = ("intent", "architecture", "plan", "glossary", "tasks_glob")
+    for key in required:
+        if key not in docs:
+            errors.append(f"taco.yaml: docs.{key} is required")
+
+    for key in ("intent", "architecture", "plan", "glossary", "doc_map"):
+        value = docs.get(key)
+        if isinstance(value, str):
+            path = ROOT / value
             if not path.exists():
-                errors.append(f"todo link path not found: {rel} (from {todo})")
-                continue
-            try:
-                rel_path = path.relative_to(ROOT).as_posix()
-            except ValueError:
-                continue
-            if "/tasks/" in rel_path and rel_path.endswith(".md"):
-                task_links.add(rel_path)
-    return errors, task_links
+                errors.append(f"taco.yaml: path not found for docs.{key}: {value}")
 
+    principles = docs.get("principles", [])
+    if isinstance(principles, list):
+        for rel in principles:
+            if isinstance(rel, str) and not (ROOT / rel).exists():
+                errors.append(f"taco.yaml: principles path not found: {rel}")
 
-def validate_todo_task_coverage(
-    task_files: list[Path], todo_task_links: set[str]
-) -> list[str]:
-    errors: list[str] = []
-    expected = {p.relative_to(ROOT).as_posix() for p in task_files}
-    missing = sorted(expected - todo_task_links)
-    if missing:
-        errors.append(f"tasks missing from todo: {missing}")
+    todo = docs.get("todo", [])
+    if isinstance(todo, list):
+        for rel in todo:
+            if isinstance(rel, str) and not (ROOT / rel).exists():
+                errors.append(f"taco.yaml: todo path not found: {rel}")
+
     return errors
 
 
 def main() -> int:
     config = load_config()
-    task_files = get_task_files(config)
-    todo_files = get_todo_files(config)
-    required = get_required_headings(config)
+    errors = validate_config_paths(config)
 
-    errors = validate_task_headings(task_files, required)
-    todo_errors, todo_task_links = validate_todo_links(todo_files)
-    errors.extend(todo_errors)
-    errors.extend(validate_todo_task_coverage(task_files, todo_task_links))
+    files = all_context_docs()
+    if not files:
+        errors.append(".context: no markdown documents found")
+
+    fm_errors, id_to_path, fm_by_path = validate_front_matter(files)
+    errors.extend(fm_errors)
+    errors.extend(validate_references(id_to_path, fm_by_path))
 
     if errors:
         print("DOC VALIDATION FAILED")
