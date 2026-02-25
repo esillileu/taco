@@ -72,6 +72,7 @@ def call_tool(state: RepoState, name: str, args: dict[str, Any]) -> dict[str, An
         "task.pack": _task_pack,
         "task.targets": _task_targets,
         "task.record": _task_record,
+        "task.complete": _task_complete,
         "doc.snippet": _doc_snippet,
         "issue.triage": _issue_triage,
         "convention.get": _convention_get,
@@ -150,6 +151,89 @@ def _task_record(state: RepoState, args: dict[str, Any]) -> dict[str, Any]:
         "target": target.to_dict(),
         "applied": True,
         "path": target.path,
+    }
+
+
+def _task_complete(state: RepoState, args: dict[str, Any]) -> dict[str, Any]:
+    task_id = _required_str(args, "task_id")
+    implementation = _required_str(args, "implementation")
+    verification = _required_str(args, "verification")
+    dry_run = args.get("dry_run", True)
+    if not isinstance(dry_run, bool):
+        raise ToolError("invalid_input", "dry_run must be boolean", {"key": "dry_run"})
+
+    task_path = state.index.task_index.get(task_id)
+    if not task_path:
+        raise ToolError(
+            "task_not_found",
+            "task id not found in index",
+            {"task_id": task_id},
+        )
+
+    task_file = state.root / task_path
+    task_text = task_file.read_text(encoding="utf-8")
+    task_meta, _ = _split_front_matter(task_text)
+    status = task_meta.get("status")
+    if isinstance(status, str) and status.strip() == "done":
+        raise ToolError(
+            "task_already_done",
+            "task is already marked done",
+            {"task_id": task_id},
+        )
+
+    implementation_target = resolve_write_target(
+        task_id, "implementation", state.index, state.router_config
+    )
+    verification_target = resolve_write_target(
+        task_id, "verification", state.index, state.router_config
+    )
+
+    updated_task = _append_under_heading(
+        task_text, implementation_target.heading, f"- {implementation}"
+    )
+    updated_task = _append_under_heading(
+        updated_task, verification_target.heading, f"- {verification}"
+    )
+    updated_task = _set_front_matter_key(updated_task, "status", "done")
+
+    plan_path = _plan_path_from_config(state.config_raw)
+    plan_file = state.root / plan_path
+    plan_text = plan_file.read_text(encoding="utf-8")
+    updated_plan, promoted = _advance_plan_for_completed_task(
+        plan_text, completed_task_id=task_id, task_index=state.index.task_index
+    )
+
+    if dry_run:
+        return {
+            "task_id": task_id,
+            "applied": False,
+            "status_from": status if isinstance(status, str) else "unknown",
+            "status_to": "done",
+            "next_active_task": promoted,
+            "task_target": task_path,
+            "plan_target": plan_path,
+            "task_preview": _preview_change(task_text, updated_task),
+            "plan_preview": _preview_change(plan_text, updated_plan),
+            "targets": {
+                "implementation": implementation_target.to_dict(),
+                "verification": verification_target.to_dict(),
+            },
+        }
+
+    task_file.write_text(updated_task, encoding="utf-8")
+    plan_file.write_text(updated_plan, encoding="utf-8")
+    return {
+        "task_id": task_id,
+        "applied": True,
+        "status_from": status if isinstance(status, str) else "unknown",
+        "status_to": "done",
+        "next_active_task": promoted,
+        "task_target": task_path,
+        "plan_target": plan_path,
+        "targets": {
+            "implementation": implementation_target.to_dict(),
+            "verification": verification_target.to_dict(),
+        },
     }
 
 
@@ -326,3 +410,102 @@ def _should_include_path(path: str, prefixes: tuple[str, ...]) -> bool:
     if path.startswith(".git/"):
         return False
     return any(path.startswith(prefix) for prefix in prefixes)
+
+
+def _split_front_matter(text: str) -> tuple[dict[str, Any], str]:
+    lines = text.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return {}, text
+    end = -1
+    for idx in range(1, len(lines)):
+        if lines[idx].strip() == "---":
+            end = idx
+            break
+    if end < 0:
+        return {}, text
+    raw = "\n".join(lines[1:end]).strip()
+    body = "\n".join(lines[end + 1 :]).lstrip("\n")
+    meta = yaml.safe_load(raw) if raw else {}
+    if not isinstance(meta, dict):
+        return {}, text
+    return meta, body
+
+
+def _compose_front_matter(meta: dict[str, Any], body: str) -> str:
+    fm = yaml.safe_dump(meta, sort_keys=False).strip()
+    body_text = body.rstrip()
+    return f"---\n{fm}\n---\n\n{body_text}\n"
+
+
+def _set_front_matter_key(text: str, key: str, value: Any) -> str:
+    meta, body = _split_front_matter(text)
+    if not meta:
+        raise ToolError(
+            "front_matter_missing",
+            "front matter is required for this operation",
+            {"key": key},
+        )
+    meta[key] = value
+    return _compose_front_matter(meta, body)
+
+
+def _plan_path_from_config(raw: dict[str, Any]) -> str:
+    docs = raw.get("docs", {})
+    if not isinstance(docs, dict):
+        raise ToolError("invalid_config", "docs config must be object", {})
+    plan = docs.get("plan")
+    if not isinstance(plan, str) or not plan.strip():
+        raise ToolError("invalid_config", "docs.plan must be non-empty string", {})
+    return plan.strip()
+
+
+def _advance_plan_for_completed_task(
+    plan_text: str,
+    completed_task_id: str,
+    task_index: dict[str, str],
+) -> tuple[str, str | None]:
+    meta, body = _split_front_matter(plan_text)
+    if not meta:
+        raise ToolError(
+            "front_matter_missing",
+            "plan front matter is required",
+            {"document": "plan"},
+        )
+    active = meta.get("active_tasks", [])
+    next_tasks = meta.get("next_tasks", [])
+    if not isinstance(active, list) or not isinstance(next_tasks, list):
+        raise ToolError(
+            "invalid_plan_meta",
+            "active_tasks and next_tasks must be arrays",
+            {"document": "plan"},
+        )
+
+    active_clean = [item for item in active if isinstance(item, str)]
+    next_clean = [item for item in next_tasks if isinstance(item, str)]
+
+    active_clean = [item for item in active_clean if item != completed_task_id]
+    promoted: str | None = None
+    remaining_next: list[str] = []
+    for item in next_clean:
+        if promoted is None and item in task_index and item not in active_clean:
+            promoted = item
+            continue
+        remaining_next.append(item)
+    if promoted and promoted not in active_clean:
+        active_clean.append(promoted)
+
+    meta["active_tasks"] = active_clean
+    meta["next_tasks"] = remaining_next
+    return _compose_front_matter(meta, body), promoted
+
+
+def _preview_change(before: str, after: str) -> str:
+    if before == after:
+        return "(no change)"
+    before_lines = before.splitlines()
+    after_lines = after.splitlines()
+    if len(after_lines) >= len(before_lines):
+        tail = after_lines[max(0, len(before_lines) - 1) :]
+    else:
+        tail = after_lines[-8:]
+    return "\n".join(tail[-12:])

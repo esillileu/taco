@@ -6,21 +6,21 @@ status: active
 phase: phase-architecture-alignment
 focus: Align architecture docs with current code and finalize front matter-based execution
 active_tasks:
-  - T-010
+- T-011
 blocked_tasks: []
 next_tasks:
-  - T-011
-  - T-012
-  - T-013
-  - T-014
+- T-012
+- T-013
+- T-014
+- T-015
 milestones:
-  - M1-front-matter-migration
-  - M2-architecture-alignment
-  - M3-pack-precision
-  - M4-cli-ergonomics
+- M1-front-matter-migration
+- M2-architecture-alignment
+- M3-feature-precision
+- M4-cli-ergonomics
 links:
-  - ARCH-INDEX
-  - PROJ-OVERVIEW
+- ARCH-INDEX
+- PROJ-OVERVIEW
 ---
 
 # Plan
@@ -62,12 +62,12 @@ links:
 - Reflect transport and error contracts as explicit schemas.
 - Ensure architecture docs remain ahead of implementation scope.
 
-## Phase 4: Pack Precision and Performance
+## Phase 4: Feature Precision and Completeness
 
-- Remove legacy selector-group dependency from pack internals.
+- Remove missing workflow gaps across task tools and closeout flows.
 - Promote front matter references to primary selection mechanism.
-- Add context size diagnostics and deterministic trimming policy.
-- Keep one-call pack readiness for implementable tasks.
+- Add deterministic behavior checks for each tool path.
+- Keep one-call pack readiness and end-to-end task completion viability.
 
 ## Phase 5: CLI Ergonomics and Human Workflow
 
@@ -98,12 +98,15 @@ links:
 
 ## Active Tasks
 
-- [T-010](./tasks/T-010-placeholder.md)
+- [T-010](./tasks/T-010-task-closeout-automation.md)
 
 ## Next Tasks
 
-- [T-009](./tasks/T-009-pack-readiness-performance.md)
-- [T-014](./tasks/T-014-cli-human-context-view.md)
+- [T-011](./tasks/T-011-feature-precision.md)
+- [T-012](./tasks/T-012-placeholder.md)
+- [T-013](./tasks/T-013-placeholder.md)
+- [T-014](./tasks/T-014-placeholder.md)
+- [T-015](./tasks/T-015-cli-human-context-view.md)
 - [T-000](./tasks/T-000-bootstrap.md)
 - [T-001](./tasks/T-001-parser-foundation.md)
 - [T-002](./tasks/T-002-indexer-foundation.md)
