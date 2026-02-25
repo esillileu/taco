@@ -14,7 +14,6 @@
 
 ## Planned
 
-- [T-001-parser-foundation](./tasks/T-001-parser-foundation.md)
 - [T-002-indexer-foundation](./tasks/T-002-indexer-foundation.md)
 - [T-003-pack-budget](./tasks/T-003-pack-budget.md)
 - [T-004-write-target-router](./tasks/T-004-write-target-router.md)
@@ -24,4 +23,4 @@
 
 ## Done
 
-- None
+- [T-001-parser-foundation](./tasks/T-001-parser-foundation.md)

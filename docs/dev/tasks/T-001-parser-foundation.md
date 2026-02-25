@@ -49,8 +49,30 @@
 
 ## Implementation Result
 
-- Pending (do not fill until the task is completed)
+- Added parser foundation module at `src/taco/parser.py`.
+- Implemented deterministic heading-based section slicing with DTO output:
+  - `SectionSlice` (`document_path`, `level`, `heading`, `anchor_id`, `start_line`, `end_line`)
+  - `ParseConfig` (`prefer_anchors`)
+- Implemented anchor normalization features:
+  - explicit anchor extraction (`{#custom-id}`)
+  - slug generation for headings
+  - duplicate anchor deduplication (`-2`, `-3`, ...)
+- Implemented typed parse error model:
+  - `ParserError(code, message, details)`
+  - invalid heading handling for empty heading text.
+- Ensured parser core remains pure (text + path input, DTO output, no filesystem access).
+- Added package source layout support with `src/taco/__init__.py`.
 
 ## Verification Result
 
-- Pending (do not fill until the task is completed)
+- Added parser behavior tests in `tests/test_parser.py` covering:
+  - nested heading slices and line boundaries
+  - duplicate heading anchor deduplication
+  - explicit anchor preference toggle
+  - missing heading case
+  - deterministic output
+  - DTO contract serialization via `to_dict()`
+- Verification commands:
+  - `uv run --extra dev ruff check .` -> pass
+  - `uv run --extra dev mypy .` -> pass
+  - `uv run --extra dev pytest -q` -> pass
