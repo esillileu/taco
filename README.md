@@ -2,39 +2,52 @@
 
 TACO (Task Context Orchestrator) is a local MCP server that builds deterministic task-level context packs from repository documentation.
 
-## Documentation System
+## Tool Surface and CLI
 
-- `docs/doc-map.md`: documentation SSOT and parsing contract
-- `docs/intent.md`: project intent and success criteria
-- `docs/architecture.md`: architecture and module boundaries
-- `docs/principles.md`: engineering principles and constraints
-- `docs/plan.md`: phased roadmap
-- `docs/setup.md`: local development environment setup
-- `docs/pre-implementation-checklist.md`: implementation readiness gate
-- `docs/glossary.md`: glossary SSOT
-- `docs/todo.md`: task index and status
-- `docs/tasks/`: task execution SSOT documents
-- `docs/adr/`: architecture decision records
-- `docs/git.md`: git workflow convention
+- Naming standard: singular domain + concise action
+- MCP and CLI use a 1:1 mapping
 
-## Adding a New Task
+| MCP Tool | CLI Command |
+| --- | --- |
+| `task.list` | `taco task list` |
+| `task.pack` | `taco task pack --id T-003 --budget 1800` |
+| `task.targets` | `taco task targets --id T-003 --mode done` |
+| `task.record` | `taco task record --id T-003 --type implementation --from result.md` |
+| `doc.snippet` | `taco doc snippet --path docs/architecture.md --anchor "핵심 모듈"` |
+| `issue.triage` | `taco issue triage --id 123` |
+| `convention.get` | `taco convention get git` |
 
-1. Copy the task template structure from `docs/tasks/T-000-bootstrap.md`.
-2. Create a new file under `docs/tasks/T-<id>.md`.
-3. Add a row in `docs/todo.md` linking to the task file.
+## Delivery Strategy
 
-## Adding a New ADR
+- Near term: ship Python implementation first for rapid iteration.
+- Long term: replace runtime with a pure Rust binary.
+- Constraint: keep MCP/CLI contracts stable across both runtimes.
+- Dogfooding: use `taco` on this repository as soon as each tool becomes available.
 
-1. Copy the ADR structure from `docs/adr/ADR-000-foundations.md`.
-2. Create a new file under `docs/adr/ADR-<id>.md`.
-3. Link related tasks in the ADR `Links` section.
+## Python Tooling
 
+- Use `uv` as the standard Python package and command manager.
+- Run project checks via `make` (which delegates to `uv`) or directly with `uv run --extra dev ...`.
 
-## Quickstart
+## Documentation Structure
 
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -e .[dev]
-make validate-docs
-```
+### SSOT (Human-facing)
+
+- `docs/intent.md`
+- `docs/architecture.md`
+- `docs/plan.md`
+- `docs/glossary.md`
+
+### Operational (Agent-facing)
+
+- `docs/dev/docs.md`
+- `docs/dev/git.md`
+- `docs/dev/todo.md`
+- `docs/dev/principles.md`
+- `docs/dev/tasks/`
+- `docs/dev/git/`
+
+## Current Project Phase
+
+The repository is in a pre-implementation design phase.
+Current work is focused on documentation structure alignment and scope tracking.
