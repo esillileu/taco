@@ -9,12 +9,14 @@
 - [Glossary](./glossary.md) - 용어 정합성
 
 ## 시스템 경계
+<!-- taco:pack=arch.snippets -->
 
 - TACO는 로컬 STDIO MCP 서버다.
 - Git 문서가 SSOT이며 캐시는 보조 인덱스 용도다.
 - 컨텍스트 생성은 요약이 아니라 파싱/슬라이싱 기반 추출이다.
 
 ## 구현 전략 경계
+<!-- taco:pack=arch.snippets -->
 
 - 1차 구현은 Python으로 빠르게 제공한다.
 - 최종 런타임은 순수 Rust 바이너리로 전환한다.

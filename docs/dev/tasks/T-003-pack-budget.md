@@ -10,14 +10,17 @@
 - [Glossary](../../glossary.md)
 
 ## Intent
+<!-- taco:pack=task.core -->
 
 - Assemble minimal and deterministic context packs by Task ID using indexed sections.
 
 ## Goal
+<!-- taco:pack=task.core -->
 
 - Deliver stable `task.pack` behavior with predictable budget trimming and priority.
 
 ## Scope
+<!-- taco:pack=task.core,pack.next_actions -->
 
 - Assemble pack payload from:
   - task core sections
@@ -27,6 +30,7 @@
 - Exclude adaptive LLM summarization and probabilistic ranking.
 
 ## Implementation Approach
+<!-- taco:pack=task.plans,pack.next_actions -->
 
 - Keep assembler pure:
   - input: task id + index DTO + config budget policy
@@ -36,6 +40,7 @@
 - Keep budget policy fully config-driven (`default_tokens`, `priority_order`).
 
 ## Verification Approach
+<!-- taco:pack=task.plans,pack.acceptance_checks,pack.verification_commands -->
 
 - Add behavior tests for:
   - pack construction for valid task ids

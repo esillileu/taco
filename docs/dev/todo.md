@@ -14,7 +14,7 @@
 
 ## Planned
 
-- None
+- [T-014-cli-human-context-view](./tasks/T-014-cli-human-context-view.md)
 
 ## Done
 
@@ -27,3 +27,4 @@
 - [T-006-integration-tests](./tasks/T-006-integration-tests.md)
 - [T-007-pre-implementation-readiness](./tasks/T-007-pre-implementation-readiness.md)
 - [T-008-cli-entrypoint](./tasks/T-008-cli-entrypoint.md)
+- [T-009-pack-readiness-performance](./tasks/T-009-pack-readiness-performance.md)

@@ -8,6 +8,9 @@
 - [Architecture](./architecture.md) - 시스템 구성 맥락
 - [Plan](./plan.md) - 단계 맥락
 
+## Terms
+<!-- taco:pack=glossary.terms -->
+
 - `TACO`: Task Context Orchestrator
 - `Task`: 단일 작업 단위 실행/추적 문서
 - `Context Pack`: task 수행에 필요한 최소 정보 묶음

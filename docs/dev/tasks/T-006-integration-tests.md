@@ -10,14 +10,17 @@
 - [Glossary](../../glossary.md)
 
 ## Intent
+<!-- taco:pack=task.core -->
 
 - Lock external behavior so Python implementation can be safely ported to Rust.
 
 ## Goal
+<!-- taco:pack=task.core -->
 
 - Provide behavior-based acceptance tests for all canonical tools and CLI mappings.
 
 ## Scope
+<!-- taco:pack=task.core,pack.next_actions -->
 
 - Cover MCP tools:
   - `task.list`
@@ -32,6 +35,7 @@
 - Exclude micro-benchmarking and load tests from this task.
 
 ## Implementation Approach
+<!-- taco:pack=task.plans,pack.next_actions -->
 
 - Build reusable fixture repositories and expected outputs (golden files).
 - Write behavior assertions against public I/O only (no internal function coupling).
@@ -42,6 +46,7 @@
 - Keep test data language-neutral (JSON/YAML fixtures) to reuse in Rust test harness.
 
 ## Verification Approach
+<!-- taco:pack=task.plans,pack.acceptance_checks,pack.verification_commands -->
 
 - Required scenarios:
   - happy path for each tool

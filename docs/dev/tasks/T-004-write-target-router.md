@@ -10,14 +10,17 @@
 - [Glossary](../../glossary.md)
 
 ## Intent
+<!-- taco:pack=task.core -->
 
 - Standardize where `task.record` writes across task lifecycle states.
 
 ## Goal
+<!-- taco:pack=task.core -->
 
 - Return precise file/section targets through `task.targets` without manual document lookup.
 
 ## Scope
+<!-- taco:pack=task.core,pack.next_actions -->
 
 - Route targets for:
   - implementation completion notes
@@ -27,6 +30,7 @@
 - Exclude actual write execution semantics (handled by `task.record`).
 
 ## Implementation Approach
+<!-- taco:pack=task.plans,pack.next_actions -->
 
 - Keep routing core pure:
   - input: task id + route type + index/task DTOs
@@ -36,6 +40,7 @@
 - Normalize not-found and ambiguous-target cases to standard error types.
 
 ## Verification Approach
+<!-- taco:pack=task.plans,pack.acceptance_checks,pack.verification_commands -->
 
 - Add behavior tests for:
   - valid routing to `Implementation Result` and `Verification Result`

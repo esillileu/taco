@@ -14,16 +14,37 @@ def _write_fixture_repo(root: Path) -> None:
 
     (root / "docs" / "intent.md").write_text("# Intent\n", encoding="utf-8")
     (root / "docs" / "architecture.md").write_text(
-        "\n".join(["# Architecture", "## System", "system detail"]),
+        "\n".join(
+            [
+                "# Architecture",
+                "## System",
+                "<!-- taco:pack=arch.snippets -->",
+                "system detail",
+            ]
+        ),
         encoding="utf-8",
     )
     (root / "docs" / "plan.md").write_text("# Plan\n", encoding="utf-8")
     (root / "docs" / "glossary.md").write_text(
-        "\n".join(["# Glossary", "## Terms", "term detail"]),
+        "\n".join(
+            [
+                "# Glossary",
+                "## Terms",
+                "<!-- taco:pack=glossary.terms -->",
+                "term detail",
+            ]
+        ),
         encoding="utf-8",
     )
     (root / "docs" / "dev" / "principles.md").write_text(
-        "\n".join(["# Principles", "## Rules", "rules detail"]),
+        "\n".join(
+            [
+                "# Principles",
+                "## Rules",
+                "<!-- taco:pack=principles.snippets -->",
+                "rules detail",
+            ]
+        ),
         encoding="utf-8",
     )
     (root / "docs" / "dev" / "todo.md").write_text("# Todo\n", encoding="utf-8")
@@ -33,14 +54,24 @@ def _write_fixture_repo(root: Path) -> None:
             [
                 "# Task: T-006-integration-tests",
                 "## Intent",
+                "<!-- taco:pack=task.core -->",
                 "intent detail",
                 "## Goal",
+                "<!-- taco:pack=task.core -->",
                 "goal detail",
                 "## Scope",
+                "<!-- taco:pack=task.core,pack.next_actions -->",
+                "- start integration checks",
                 "scope detail",
                 "## Implementation Approach",
+                "<!-- taco:pack=task.plans,pack.next_actions -->",
+                "1. run tool integration",
                 "impl detail",
                 "## Verification Approach",
+                "<!-- taco:pack=task.plans,pack.acceptance_checks,"
+                "pack.verification_commands -->",
+                "- ensure pack deterministic",
+                "- uv run --extra dev pytest -q",
                 "verify detail",
                 "## Implementation Result",
                 "Pending",
@@ -69,6 +100,13 @@ def _write_fixture_repo(root: Path) -> None:
                 "arch.snippets",
                 "principles.snippets",
                 "glossary.terms",
+            ],
+            "required_groups": [
+                "task.core",
+                "task.plans",
+                "pack.next_actions",
+                "pack.acceptance_checks",
+                "pack.verification_commands",
             ],
         },
         "modules": {"git": {"path": "docs/dev/git.md"}},

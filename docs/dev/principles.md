@@ -10,6 +10,7 @@
 - [Plan](../plan.md) - phase baseline
 
 ## Principles
+<!-- taco:pack=principles.snippets -->
 
 - Use MCP-first workflow over direct document exploration when operating as an agent.
 - Keep planning deterministic and traceable to SSOT documents.
@@ -18,6 +19,7 @@
 - Record implementation and verification outcomes only after task completion.
 
 ## Design and Implementation Principles
+<!-- taco:pack=principles.snippets -->
 
 - Python-first delivery, Rust-final architecture:
   - Deliver the first usable version in Python.

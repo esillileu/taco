@@ -10,14 +10,17 @@
 - [Glossary](../../glossary.md)
 
 ## Intent
+<!-- taco:pack=task.core -->
 
 - Create a stable doc/task/link index that can be shared by `pack`, `snippet`, and `targets`.
 
 ## Goal
+<!-- taco:pack=task.core -->
 
 - Produce a deterministic index graph from repository docs with minimal language/runtime coupling.
 
 ## Scope
+<!-- taco:pack=task.core,pack.next_actions -->
 
 - Build index DTOs for:
   - doc type classification (intent, architecture, plan, glossary, principles, task, todo, git docs)
@@ -27,6 +30,7 @@
 - Exclude caching and parallel scan optimization from core logic.
 
 ## Implementation Approach
+<!-- taco:pack=task.plans,pack.next_actions -->
 
 - Split I/O and core:
   - scanner adapter collects file contents
@@ -36,6 +40,7 @@
 - Preserve deterministic ordering by canonical path sort.
 
 ## Verification Approach
+<!-- taco:pack=task.plans,pack.acceptance_checks,pack.verification_commands -->
 
 - Add fixture tests for:
   - mixed valid/invalid task files

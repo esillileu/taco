@@ -85,6 +85,19 @@ def test_section_slice_to_dict_contract() -> None:
         "level": 1,
         "heading": "Alpha",
         "anchor_id": "alpha",
+        "pack_groups": (),
         "start_line": 1,
         "end_line": 1,
     }
+
+
+def test_parse_markdown_sections_extracts_pack_groups() -> None:
+    text = "\n".join(
+        [
+            "## Scope",
+            "<!-- taco:pack=task.core,pack.next_actions -->",
+            "content",
+        ]
+    )
+    section = parse_markdown_sections("docs/sample.md", text)[0]
+    assert section.pack_groups == ("task.core", "pack.next_actions")

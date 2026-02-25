@@ -12,14 +12,17 @@
 - [Task: T-006-integration-tests](./T-006-integration-tests.md)
 
 ## Intent
+<!-- taco:pack=task.core -->
 
 - Make tool-surface behavior directly executable via `taco <domain> <action>` command.
 
 ## Goal
+<!-- taco:pack=task.core -->
 
 - Provide a real CLI command entrypoint with stable JSON output and proper exit codes.
 
 ## Scope
+<!-- taco:pack=task.core,pack.next_actions -->
 
 - Add Python package script entrypoint for `taco`.
 - Implement CLI argument parsing for canonical domains/actions.
@@ -27,6 +30,7 @@
 - Add behavior tests for CLI main flow.
 
 ## Implementation Approach
+<!-- taco:pack=task.plans,pack.next_actions -->
 
 - Add `[project.scripts] taco = "taco.main:main"` in `pyproject.toml`.
 - Implement `src/taco/main.py`:
@@ -38,6 +42,7 @@
 - Keep error response aligned with standard envelope and codes.
 
 ## Verification Approach
+<!-- taco:pack=task.plans,pack.acceptance_checks,pack.verification_commands -->
 
 - Add CLI main tests with fixture repository setup.
 - Validate:

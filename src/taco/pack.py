@@ -11,6 +11,7 @@ from taco.indexer import HeadingRef, IndexedDocument, IndexGraph
 class BudgetConfig:
     default_tokens: int
     priority_order: tuple[str, ...]
+    required_groups: tuple[str, ...]
 
     @classmethod
     def from_dict(cls, raw: dict[str, object]) -> BudgetConfig:
@@ -19,6 +20,16 @@ class BudgetConfig:
             raise PackError("invalid_config", "budget config must be an object", {})
         default_tokens = budget.get("default_tokens")
         priority_order = budget.get("priority_order")
+        required_groups = budget.get(
+            "required_groups",
+            [
+                "task.core",
+                "task.plans",
+                "pack.next_actions",
+                "pack.acceptance_checks",
+                "pack.verification_commands",
+            ],
+        )
         if not isinstance(default_tokens, int):
             raise PackError(
                 "invalid_config",
@@ -33,7 +44,19 @@ class BudgetConfig:
                 "budget.priority_order must be a list of strings",
                 {"key": "priority_order"},
             )
-        return cls(default_tokens=default_tokens, priority_order=tuple(priority_order))
+        if not isinstance(required_groups, list) or not all(
+            isinstance(item, str) for item in required_groups
+        ):
+            raise PackError(
+                "invalid_config",
+                "budget.required_groups must be a list of strings",
+                {"key": "required_groups"},
+            )
+        return cls(
+            default_tokens=default_tokens,
+            priority_order=tuple(priority_order),
+            required_groups=tuple(required_groups),
+        )
 
 
 @dataclass(frozen=True)
@@ -64,18 +87,34 @@ class DroppedSnippet:
 
 @dataclass(frozen=True)
 class PackResult:
+    pack_version: str
     task_id: str
     budget_tokens: int
     used_tokens: int
-    snippets: tuple[PackSnippet, ...]
+    next_actions: tuple[str, ...]
+    acceptance_checks: tuple[str, ...]
+    verification_commands: tuple[str, ...]
+    write_targets: tuple[dict[str, str | int], ...]
+    context_snippets: tuple[PackSnippet, ...]
+    unknowns: tuple[str, ...]
+    coverage: dict[str, list[str]]
     dropped: tuple[DroppedSnippet, ...]
 
     def to_dict(self) -> dict[str, object]:
         return {
+            "pack_version": self.pack_version,
             "task_id": self.task_id,
             "budget_tokens": self.budget_tokens,
             "used_tokens": self.used_tokens,
-            "snippets": [snippet.to_dict() for snippet in self.snippets],
+            "next_actions": list(self.next_actions),
+            "acceptance_checks": list(self.acceptance_checks),
+            "verification_commands": list(self.verification_commands),
+            "write_targets": list(self.write_targets),
+            "context_snippets": [
+                snippet.to_dict() for snippet in self.context_snippets
+            ],
+            "unknowns": list(self.unknowns),
+            "coverage": self.coverage,
             "dropped": [item.to_dict() for item in self.dropped],
         }
 
@@ -104,12 +143,35 @@ def build_task_pack(
             details={"task_id": task_id},
         )
 
+    task_doc = _find_doc(index.documents, task_path)
+    if not task_doc:
+        raise PackError(
+            code="task_doc_missing",
+            message="task document missing from indexed docs",
+            details={"task_id": task_id, "path": task_path},
+        )
+
     candidates = _build_candidates(task_id, task_path, index, estimator)
     if not candidates:
         raise PackError(
-            code="empty_pack",
-            message="no snippets could be assembled for task",
-            details={"task_id": task_id},
+            code="pack_not_ready",
+            message="required selector groups are missing",
+            details={
+                "task_id": task_id,
+                "missing_groups": ",".join(sorted(set(budget.required_groups))),
+            },
+        )
+
+    by_group: dict[str, list[_CandidateSnippet]] = {}
+    for item in candidates:
+        by_group.setdefault(item.group, []).append(item)
+
+    missing_groups = sorted(set(budget.required_groups) - set(by_group))
+    if missing_groups:
+        raise PackError(
+            code="pack_not_ready",
+            message="required selector groups are missing",
+            details={"task_id": task_id, "missing_groups": ",".join(missing_groups)},
         )
 
     priority_rank = {group: rank for rank, group in enumerate(budget.priority_order)}
@@ -125,10 +187,12 @@ def build_task_pack(
     used_tokens = 0
     included: list[PackSnippet] = []
     dropped: list[DroppedSnippet] = []
+    required_set = set(budget.required_groups)
 
     for candidate in sorted_candidates:
+        is_required = candidate.group in required_set
         next_used = used_tokens + candidate.estimated_tokens
-        if next_used <= budget.default_tokens:
+        if is_required or next_used <= budget.default_tokens:
             used_tokens = next_used
             included.append(
                 PackSnippet(
@@ -152,11 +216,29 @@ def build_task_pack(
             )
         )
 
+    next_actions = _collect_action_items(included, "pack.next_actions")
+    acceptance_checks = _collect_action_items(included, "pack.acceptance_checks")
+    verification_commands = _collect_action_items(
+        included, "pack.verification_commands"
+    )
+    unknowns = tuple(_collect_action_items(included, "pack.unknowns"))
+    write_targets = _derive_write_targets(task_doc)
+
     return PackResult(
+        pack_version="2",
         task_id=task_id,
         budget_tokens=budget.default_tokens,
         used_tokens=used_tokens,
-        snippets=tuple(included),
+        next_actions=tuple(next_actions),
+        acceptance_checks=tuple(acceptance_checks),
+        verification_commands=tuple(verification_commands),
+        write_targets=write_targets,
+        context_snippets=tuple(included),
+        unknowns=unknowns,
+        coverage={
+            "required_groups": sorted(required_set),
+            "missing_groups": missing_groups,
+        },
         dropped=tuple(dropped),
     )
 
@@ -181,90 +263,25 @@ def _build_candidates(
     index: IndexGraph,
     estimator: Callable[[str], int],
 ) -> list[_CandidateSnippet]:
-    task_doc = _find_doc(index.documents, task_path)
-    if not task_doc:
-        raise PackError(
-            code="task_doc_missing",
-            message="task document missing from indexed docs",
-            details={"task_id": task_id, "path": task_path},
-        )
-
     candidates: list[_CandidateSnippet] = []
-    task_core_headings = {"Intent", "Goal", "Scope"}
-    task_plan_headings = {"Implementation Approach", "Verification Approach"}
-
-    for heading in task_doc.headings:
-        group = None
-        if heading.heading in task_core_headings:
-            group = "task.core"
-        elif heading.heading in task_plan_headings:
-            group = "task.plans"
-        if group:
-            candidates.append(
-                _to_candidate(
-                    group,
-                    task_doc.path,
-                    heading,
-                    index.document_texts,
-                    estimator,
+    for doc in index.documents:
+        if doc.path.startswith("docs/dev/tasks/") and doc.path != task_path:
+            continue
+        for heading in doc.headings:
+            for group in heading.pack_groups:
+                if group.startswith("task.") and doc.path != task_path:
+                    continue
+                candidates.append(
+                    _to_candidate(
+                        group=group,
+                        path=doc.path,
+                        heading=heading,
+                        document_texts=index.document_texts,
+                        estimator=estimator,
+                        reason="selector_match",
+                    )
                 )
-            )
-
-    arch_doc = _find_first_doc_by_type(index.documents, "architecture")
-    if arch_doc:
-        candidates.extend(
-            _collect_first_n(
-                group="arch.snippets",
-                doc=arch_doc,
-                n=2,
-                document_texts=index.document_texts,
-                estimator=estimator,
-                reason="architecture_context",
-            )
-        )
-
-    principles_doc = _find_first_doc_by_type(index.documents, "principles")
-    if principles_doc:
-        candidates.extend(
-            _collect_first_n(
-                group="principles.snippets",
-                doc=principles_doc,
-                n=2,
-                document_texts=index.document_texts,
-                estimator=estimator,
-                reason="principles_context",
-            )
-        )
-
-    glossary_doc = _find_first_doc_by_type(index.documents, "glossary")
-    if glossary_doc:
-        candidates.extend(
-            _collect_first_n(
-                group="glossary.terms",
-                doc=glossary_doc,
-                n=1,
-                document_texts=index.document_texts,
-                estimator=estimator,
-                reason="glossary_context",
-            )
-        )
-
     return candidates
-
-
-def _collect_first_n(
-    group: str,
-    doc: IndexedDocument,
-    n: int,
-    document_texts: dict[str, str],
-    estimator: Callable[[str], int],
-    reason: str,
-) -> list[_CandidateSnippet]:
-    selected = list(doc.headings[:n])
-    return [
-        _to_candidate(group, doc.path, heading, document_texts, estimator, reason)
-        for heading in selected
-    ]
 
 
 def _to_candidate(
@@ -312,10 +329,50 @@ def _find_doc(
     return None
 
 
-def _find_first_doc_by_type(
-    documents: tuple[IndexedDocument, ...], doc_type: str
-) -> IndexedDocument | None:
-    for doc in documents:
-        if doc.doc_type == doc_type:
-            return doc
-    return None
+def _collect_action_items(snippets: list[PackSnippet], group: str) -> list[str]:
+    values: list[str] = []
+    for snippet in snippets:
+        if snippet.group != group:
+            continue
+        for line in snippet.content.splitlines():
+            raw = line.strip()
+            if not raw:
+                continue
+            if raw.startswith("## "):
+                continue
+            if raw.startswith("<!--"):
+                continue
+            if raw.startswith("- "):
+                values.append(raw[2:].strip())
+            elif re.match(r"^\d+\.\s+", raw):
+                values.append(re.sub(r"^\d+\.\s+", "", raw))
+            else:
+                values.append(raw)
+    deduped: list[str] = []
+    for item in values:
+        if item not in deduped:
+            deduped.append(item)
+    return deduped
+
+
+def _derive_write_targets(
+    task_doc: IndexedDocument,
+) -> tuple[dict[str, str | int], ...]:
+    targets: list[dict[str, str | int]] = []
+    heading_to_mode = {
+        "Implementation Result": "append_implementation",
+        "Verification Result": "append_verification",
+    }
+    for heading in task_doc.headings:
+        mode = heading_to_mode.get(heading.heading)
+        if not mode:
+            continue
+        targets.append(
+            {
+                "path": task_doc.path,
+                "heading": heading.heading,
+                "line_hint": heading.end_line,
+                "mode": mode,
+            }
+        )
+    return tuple(targets)

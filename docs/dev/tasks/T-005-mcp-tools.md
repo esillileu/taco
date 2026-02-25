@@ -10,14 +10,17 @@
 - [Glossary](../../glossary.md)
 
 ## Intent
+<!-- taco:pack=task.core -->
 
 - Fix one canonical tool naming model so Python-first and Rust-final implementations share the same contract.
 
 ## Goal
+<!-- taco:pack=task.core -->
 
 - Publish a decision-complete MCP/CLI interface specification for task-centric document orchestration.
 
 ## Scope
+<!-- taco:pack=task.core,pack.next_actions -->
 
 - Standardize naming to singular domain + concise action.
 - Define MCP tool list and 1:1 CLI command mapping.
@@ -26,6 +29,7 @@
 - Exclude runtime implementation details and transport internals.
 
 ## Implementation Approach
+<!-- taco:pack=task.plans,pack.next_actions -->
 
 - Adopt canonical MCP tools:
   - `task.list`
@@ -48,6 +52,7 @@
   - Renames are allowed only before first external release tag.
 
 ## Verification Approach
+<!-- taco:pack=task.plans,pack.acceptance_checks,pack.verification_commands -->
 
 - Validate that SSOT docs and AGENTS instructions use canonical names consistently.
 - Validate that examples in README follow the canonical CLI shape.

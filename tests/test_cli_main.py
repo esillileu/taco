@@ -13,13 +13,38 @@ def _write_fixture_repo(root: Path) -> None:
     (root / "docs" / "dev").mkdir(exist_ok=True)
     (root / "docs" / "intent.md").write_text("# Intent\n", encoding="utf-8")
     (root / "docs" / "architecture.md").write_text(
-        "\n".join(["# Architecture", "## System", "system detail"]),
+        "\n".join(
+            [
+                "# Architecture",
+                "## System",
+                "<!-- taco:pack=arch.snippets -->",
+                "system detail",
+            ]
+        ),
         encoding="utf-8",
     )
     (root / "docs" / "plan.md").write_text("# Plan\n", encoding="utf-8")
-    (root / "docs" / "glossary.md").write_text("# Glossary\n", encoding="utf-8")
+    (root / "docs" / "glossary.md").write_text(
+        "\n".join(
+            [
+                "# Glossary",
+                "## Terms",
+                "<!-- taco:pack=glossary.terms -->",
+                "term detail",
+            ]
+        ),
+        encoding="utf-8",
+    )
     (root / "docs" / "dev" / "principles.md").write_text(
-        "# Principles\n", encoding="utf-8"
+        "\n".join(
+            [
+                "# Principles",
+                "## Rules",
+                "<!-- taco:pack=principles.snippets -->",
+                "rules detail",
+            ]
+        ),
+        encoding="utf-8",
     )
     (root / "docs" / "dev" / "todo.md").write_text("# Todo\n", encoding="utf-8")
     (root / "docs" / "dev" / "git.md").write_text("# Git Rules\n", encoding="utf-8")
@@ -28,14 +53,24 @@ def _write_fixture_repo(root: Path) -> None:
             [
                 "# Task: T-008-cli-entrypoint",
                 "## Intent",
+                "<!-- taco:pack=task.core -->",
                 "intent",
                 "## Goal",
+                "<!-- taco:pack=task.core -->",
                 "goal",
                 "## Scope",
+                "<!-- taco:pack=task.core,pack.next_actions -->",
+                "- run cli task list",
                 "scope",
                 "## Implementation Approach",
+                "<!-- taco:pack=task.plans,pack.next_actions -->",
+                "1. wire argparse",
                 "impl",
                 "## Verification Approach",
+                "<!-- taco:pack=task.plans,pack.acceptance_checks,"
+                "pack.verification_commands -->",
+                "- verify cli json output",
+                "- uv run --extra dev pytest -q",
                 "verify",
                 "## Implementation Result",
                 "Pending",
@@ -63,6 +98,13 @@ def _write_fixture_repo(root: Path) -> None:
                 "arch.snippets",
                 "principles.snippets",
                 "glossary.terms",
+            ],
+            "required_groups": [
+                "task.core",
+                "task.plans",
+                "pack.next_actions",
+                "pack.acceptance_checks",
+                "pack.verification_commands",
             ],
         },
         "modules": {"git": {"path": "docs/dev/git.md"}},

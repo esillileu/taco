@@ -10,14 +10,17 @@
 - [Glossary](../../glossary.md)
 
 ## Intent
+<!-- taco:pack=task.core -->
 
 - Verify that design, task plans, and operating principles are decision-complete and internally consistent.
 
 ## Goal
+<!-- taco:pack=task.core -->
 
 - Approve implementation kickoff with explicit Python-first and Rust-porting constraints.
 
 ## Scope
+<!-- taco:pack=task.core,pack.next_actions -->
 
 - Validate consistency across SSOT and `docs/dev/*`.
 - Validate canonical tool naming and CLI mapping consistency.
@@ -33,6 +36,7 @@
 - Validate dogfooding policy and migration gate criteria.
 
 ## Implementation Approach
+<!-- taco:pack=task.plans,pack.next_actions -->
 
 - Run documentation conformance checks (`scripts/validate_docs.py`).
 - Run targeted content checks for stale names and outdated assumptions.
@@ -40,6 +44,7 @@
 - Keep any unresolved decisions explicitly listed as blockers.
 
 ## Verification Approach
+<!-- taco:pack=task.plans,pack.acceptance_checks,pack.verification_commands -->
 
 - Acceptance criteria:
   - no stale tool names remain in active docs

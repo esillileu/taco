@@ -15,6 +15,7 @@
 - 기능 정의(도구 표면, 입력/출력, 라우팅 기준)를 문서에 반영한다.
 
 ## Phase 1: Scope and Interface Definition
+<!-- taco:pack=plan.snippets -->
 
 - task별 `Intent/Goal/Scope`를 SSOT 기반으로 구체화한다.
 - MCP 도구별 입력/출력 스키마를 명확히 정리한다.
@@ -22,6 +23,7 @@
 - Python 구현과 Rust 포팅 간 공통 DTO/에러 계약을 고정한다.
 
 ## Phase 2: Approach and Verification Design
+<!-- taco:pack=plan.snippets -->
 
 - task별 구현 접근과 검증 접근을 설계한다.
 - 결정/미정/리스크를 문서에서 추적 가능하게 정리한다.

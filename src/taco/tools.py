@@ -105,6 +105,7 @@ def _task_pack(state: RepoState, args: dict[str, Any]) -> dict[str, Any]:
         budget_config = BudgetConfig(
             default_tokens=budget_tokens,
             priority_order=state.budget_config.priority_order,
+            required_groups=state.budget_config.required_groups,
         )
     result = build_task_pack(task_id, state.index, budget_config)
     return result.to_dict()

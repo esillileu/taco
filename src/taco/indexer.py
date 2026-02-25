@@ -75,6 +75,7 @@ class HeadingRef:
     level: int
     heading: str
     anchor_id: str
+    pack_groups: tuple[str, ...]
     start_line: int
     end_line: int
 
@@ -151,6 +152,7 @@ def build_index(documents: list[DocumentInput], config: IndexConfig) -> IndexGra
                 level=section.level,
                 heading=section.heading,
                 anchor_id=section.anchor_id,
+                pack_groups=section.pack_groups,
                 start_line=section.start_line,
                 end_line=section.end_line,
             )

@@ -10,14 +10,17 @@
 - [Glossary](../../glossary.md)
 
 ## Intent
+<!-- taco:pack=task.core -->
 
 - Build a language-agnostic parser contract for heading/anchor based extraction.
 
 ## Goal
+<!-- taco:pack=task.core -->
 
 - Provide stable section slicing outputs for downstream `indexer` and `pack`.
 
 ## Scope
+<!-- taco:pack=task.core,pack.next_actions -->
 
 - Parse markdown into a simple DTO tree:
   - document path
@@ -28,6 +31,7 @@
 - Exclude semantic ranking and budget decisions.
 
 ## Implementation Approach
+<!-- taco:pack=task.plans,pack.next_actions -->
 
 - Keep parser core pure:
   - input: raw markdown text + path metadata
@@ -38,6 +42,7 @@
 - Define typed parse errors and map them to standard error envelope at tool boundary.
 
 ## Verification Approach
+<!-- taco:pack=task.plans,pack.acceptance_checks,pack.verification_commands -->
 
 - Add fixture-based parsing tests for:
   - nested heading levels

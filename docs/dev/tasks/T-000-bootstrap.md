@@ -11,26 +11,31 @@
 - [Documentation Guide](../docs.md)
 
 ## Intent
+<!-- taco:pack=task.core -->
 
 - Make documentation alone sufficient to track project intent, scope, and readiness status.
 
 ## Goal
+<!-- taco:pack=task.core -->
 
 - Stabilize the SSOT + operational documentation model before implementation starts.
 
 ## Scope
+<!-- taco:pack=task.core,pack.next_actions -->
 
 - Enforce the boundary: `docs/` for SSOT, `docs/dev/` for agent operations.
 - Ensure functional-definition ownership is explicit across SSOT and task docs.
 - Ensure downstream task documents are detailed enough for implementation kickoff.
 
 ## Implementation Approach
+<!-- taco:pack=task.plans,pack.next_actions -->
 
 - Reflect legacy design intent (MCP-first, deterministic extraction, task-centric routing) into SSOT docs.
 - Maintain concise operational guidance in `docs/dev/docs.md`, `docs/dev/git.md`, and `docs/dev/todo.md`.
 - Keep required task headings consistent with `taco.yaml` and validation logic.
 
 ## Verification Approach
+<!-- taco:pack=task.plans,pack.acceptance_checks,pack.verification_commands -->
 
 - Confirm links resolve across `docs/` and `docs/dev/`.
 - Confirm todo tracking points to `docs/dev/tasks/*`.

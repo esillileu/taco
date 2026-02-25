@@ -10,12 +10,12 @@ TACO (Task Context Orchestrator) is a local MCP server that builds deterministic
 | MCP Tool | CLI Command |
 | --- | --- |
 | `task.list` | `taco task list` |
-| `task.pack` | `taco task pack --id T-003 --budget 1800` |
-| `task.targets` | `taco task targets --id T-003 --mode done` |
-| `task.record` | `taco task record --id T-003 --type implementation --from result.md` |
-| `doc.snippet` | `taco doc snippet --path docs/architecture.md --anchor "핵심 모듈"` |
-| `issue.triage` | `taco issue triage --id 123` |
-| `convention.get` | `taco convention get git` |
+| `task.pack` | `taco task pack --task-id T-003 --budget-tokens 1800` |
+| `task.targets` | `taco task targets --task-id T-003 --route-type implementation_result` |
+| `task.record` | `taco task record --task-id T-003 --route-type implementation_result --content "done"` |
+| `doc.snippet` | `taco doc snippet --path docs/architecture.md --anchor-id system` |
+| `issue.triage` | `taco issue triage --title "fix broken parser"` |
+| `convention.get` | `taco convention get --topic git` |
 
 ## Delivery Strategy
 
