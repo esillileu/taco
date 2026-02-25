@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from posixpath import dirname, relpath
@@ -26,6 +27,7 @@ class RepoState:
     budget_config: BudgetConfig
     router_config: RouterConfig
     common_required_refs: tuple[str, ...]
+    task_required_headings: tuple[str, ...] = ()
 
 
 class ToolError(ValueError):
@@ -64,6 +66,7 @@ def load_repo_state(root: Path, config_path: Path | None = None) -> RepoState:
         budget_config=budget_config,
         router_config=router_config,
         common_required_refs=_load_common_required_refs(raw),
+        task_required_headings=_load_task_required_headings(raw),
     )
 
 
@@ -98,6 +101,7 @@ def _task_list(state: RepoState, _: dict[str, Any]) -> dict[str, Any]:
 
 def _task_pack(state: RepoState, args: dict[str, Any]) -> dict[str, Any]:
     task_id = _required_str(args, "task_id")
+    _ensure_task_readiness_for_pack(state, task_id)
     budget_tokens = args.get("budget_tokens")
     budget_config = state.budget_config
     if budget_tokens is not None:
@@ -375,6 +379,132 @@ def _load_common_required_refs(raw: dict[str, Any]) -> tuple[str, ...]:
         if value and value not in ref_ids:
             ref_ids.append(value)
     return tuple(ref_ids)
+
+
+def _load_task_required_headings(raw: dict[str, Any]) -> tuple[str, ...]:
+    defaults = (
+        "Intent",
+        "Goal",
+        "Scope",
+        "Implementation Approach",
+        "Verification Approach",
+        "Implementation Result",
+        "Verification Result",
+    )
+    parsing = raw.get("parsing", {})
+    if not isinstance(parsing, dict):
+        return defaults
+    values = parsing.get("task_required_headings")
+    if not isinstance(values, list):
+        return defaults
+    headings: list[str] = []
+    for item in values:
+        if not isinstance(item, str):
+            continue
+        heading = item.strip()
+        if heading and heading not in headings:
+            headings.append(heading)
+    if not headings:
+        return defaults
+    return tuple(headings)
+
+
+def _ensure_task_readiness_for_pack(state: RepoState, task_id: str) -> None:
+    task_path = state.index.task_index.get(task_id)
+    if not task_path:
+        raise ToolError(
+            "task_not_found",
+            "task id not found in index",
+            {"task_id": task_id},
+        )
+    task_doc = next(
+        (doc for doc in state.index.documents if doc.path == task_path), None
+    )
+    if task_doc is None:
+        raise ToolError(
+            "task_doc_missing",
+            "task document missing from indexed docs",
+            {"task_id": task_id, "path": task_path},
+        )
+    text = state.index.document_texts.get(task_path, "")
+    meta, _ = _split_front_matter(text)
+
+    missing: list[str] = []
+    if not meta:
+        missing.append("front_matter")
+    else:
+        scope = meta.get("scope")
+        if not isinstance(scope, dict):
+            missing.append("scope")
+        else:
+            for key in ("in", "out"):
+                value = scope.get(key)
+                if not isinstance(value, list):
+                    missing.append(f"scope.{key}")
+
+        references = meta.get("references")
+        if not isinstance(references, dict):
+            missing.append("references")
+        else:
+            for key in ("modules", "flows", "schemas"):
+                value = references.get(key)
+                if not isinstance(value, list):
+                    missing.append(f"references.{key}")
+                    continue
+                values = [item.strip() for item in value if isinstance(item, str)]
+                if not values:
+                    missing.append(f"references.{key}")
+
+    required = state.task_required_headings
+    seen_headings = {heading.heading for heading in task_doc.headings}
+    for heading in required:
+        if heading not in seen_headings:
+            missing.append(f"heading:{heading}")
+
+    if (
+        "heading:Verification Approach" not in missing
+        and not _has_verification_criteria(task_doc, text)
+    ):
+        missing.append("verification.criteria")
+
+    if missing:
+        deduped = list(dict.fromkeys(missing))
+        raise ToolError(
+            "task_not_ready",
+            "task is not ready for pack execution",
+            {
+                "task_id": task_id,
+                "missing_requirements": ",".join(deduped),
+            },
+        )
+
+
+def _has_verification_criteria(doc: Any, text: str) -> bool:
+    heading = next(
+        (item for item in doc.headings if item.heading == "Verification Approach"),
+        None,
+    )
+    if heading is None:
+        return False
+    lines = text.splitlines()
+    start = max(heading.start_line, 0)
+    end = min(heading.end_line, len(lines))
+    body = lines[start:end]
+    for raw in body:
+        stripped = raw.strip()
+        if not stripped:
+            continue
+        if stripped.startswith("<!--") and stripped.endswith("-->"):
+            continue
+        if stripped.lower() in {"pending", "pending definition.", "tbd"}:
+            continue
+        if stripped.startswith("- "):
+            return True
+        if re.match(r"^\d+\.\s+\S", stripped):
+            return True
+        if "`" in stripped:
+            return True
+    return False
 
 
 def _collect_doc_prefixes(raw: dict[str, Any]) -> tuple[str, ...]:
