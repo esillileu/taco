@@ -91,6 +91,24 @@ def map_cli_to_tool(
         return "issue.triage", {"title": _required_str(options, "title")}
     if domain == "convention" and action == "get":
         return "convention.get", {"topic": _required_str(options, "topic")}
+    if domain == "plan" and action == "view":
+        return "plan.view", {}
+    if domain == "plan" and action == "locate":
+        locate_payload: dict[str, Any] = {
+            "change_type": _required_str(options, "change_type"),
+        }
+        target = options.get("target")
+        if target is not None:
+            if not isinstance(target, str):
+                raise CliError(
+                    "invalid_option",
+                    "target must be a string",
+                    {"key": "target"},
+                )
+            locate_payload["target"] = target.strip()
+        return "plan.locate", locate_payload
+    if domain == "plan" and action == "validate":
+        return "plan.validate", {}
 
     raise CliError(
         "unknown_command",

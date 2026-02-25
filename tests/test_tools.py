@@ -169,7 +169,10 @@ def _state(tmp_path: Path) -> RepoState:
     index = build_index(docs, index_cfg)
     return RepoState(
         root=tmp_path,
-        config_raw={"modules": {"git": {"path": "docs/dev/git.md"}}},
+        config_raw={
+            "docs": {"plan": "docs/plan.md"},
+            "modules": {"git": {"path": "docs/dev/git.md"}},
+        },
         index=index,
         budget_config=BudgetConfig(
             default_tokens=200,
@@ -236,6 +239,22 @@ def test_doc_snippet_issue_triage_and_convention(tmp_path: Path) -> None:
     convention = call_tool(state, "convention.get", {"topic": "git"})
     assert convention["ok"] is True
     assert convention["data"]["path"] == "docs/dev/git.md"
+
+    plan_view = call_tool(state, "plan.view", {})
+    assert plan_view["ok"] is True
+    assert "plan" in plan_view["data"]
+
+    plan_locate = call_tool(
+        state,
+        "plan.locate",
+        {"change_type": "task", "target": "T-005"},
+    )
+    assert plan_locate["ok"] is True
+    assert plan_locate["data"]["count"] >= 1
+
+    plan_validate = call_tool(state, "plan.validate", {})
+    assert plan_validate["ok"] is True
+    assert "valid" in plan_validate["data"]
 
 
 def test_task_record_dry_run_preview(tmp_path: Path) -> None:

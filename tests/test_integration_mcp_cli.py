@@ -219,6 +219,13 @@ def test_integration_happy_path_for_all_tools(tmp_path: Path) -> None:
             "dry_run": True,
         },
     )["ok"] is True
+    assert call_tool(state, "plan.view", {})["ok"] is True
+    assert call_tool(
+        state,
+        "plan.locate",
+        {"change_type": "task", "target": "T-006"},
+    )["ok"] is True
+    assert call_tool(state, "plan.validate", {})["ok"] is True
     assert call_tool(
         state,
         "doc.snippet",
@@ -302,4 +309,9 @@ def test_cli_mapping_parity_with_mcp_calls(tmp_path: Path) -> None:
             "dry_run": True,
         },
     )
+    assert cli_result == mcp_result
+
+    tool_name, payload = map_cli_to_tool("plan", "view", {})
+    cli_result = call_tool(state, tool_name, payload)
+    mcp_result = call_tool(state, "plan.view", {})
     assert cli_result == mcp_result
