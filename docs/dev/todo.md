@@ -14,7 +14,7 @@
 
 ## Planned
 
-- [T-007-pre-implementation-readiness](./tasks/T-007-pre-implementation-readiness.md)
+- None
 
 ## Done
 
@@ -24,3 +24,4 @@
 - [T-004-write-target-router](./tasks/T-004-write-target-router.md)
 - [T-005-mcp-tools](./tasks/T-005-mcp-tools.md)
 - [T-006-integration-tests](./tasks/T-006-integration-tests.md)
+- [T-007-pre-implementation-readiness](./tasks/T-007-pre-implementation-readiness.md)
