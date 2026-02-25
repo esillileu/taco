@@ -52,6 +52,7 @@
 - Use canonical tool naming: singular domain + concise action (`task.pack`, `doc.snippet`).
 - Keep CLI command shape aligned with MCP naming: `taco <domain> <action> [options]`.
 - Use `uv` for Python dependency and command execution (`uv run --extra dev ...`).
+- Local `ruff`/`mypy` binaries may be used for faster feedback, but reproducible checks should still pass via `uv`.
 
 ## Task File Contract
 

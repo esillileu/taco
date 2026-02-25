@@ -22,9 +22,10 @@
 
 ## Naming
 
-- format: `<type>/<issue-number>-<slug>`
+- format: `<type>/<slug>`
 - use lowercase kebab-case slug
-- always include issue number
+- include task id in slug when available (example: `feat/t-003-pack-budget`)
+- issue number in branch name is optional
 
 ## Creation Base
 

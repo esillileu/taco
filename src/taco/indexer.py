@@ -106,6 +106,7 @@ class IndexGraph:
     task_index: dict[str, str]
     link_graph: dict[str, tuple[str, ...]]
     heading_lookup: dict[str, HeadingRef]
+    document_texts: dict[str, str]
 
 
 class IndexerError(ValueError):
@@ -175,6 +176,7 @@ def build_index(documents: list[DocumentInput], config: IndexConfig) -> IndexGra
         task_index=task_index,
         link_graph=link_graph,
         heading_lookup=heading_lookup,
+        document_texts={doc.path: doc.text for doc in sorted_docs},
     )
 
 
