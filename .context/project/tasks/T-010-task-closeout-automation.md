@@ -2,27 +2,38 @@
 id: T-010
 type: task
 title: T-010-task-closeout-automation
-status: active
+status: done
 plan_ref: PLAN-MAIN
 priority: p0
 estimate: m
 scope:
   in:
-    - src/taco/tools.py
-    - src/taco/router.py
-    - src/taco/pack.py
-    - .context/project/plan.md
+  - src/taco/tools.py
+  - src/taco/router.py
+  - src/taco/pack.py
+  - .context/project/plan.md
   out:
-    - large CLI redesign
-    - non-task workflow automation
+  - large CLI redesign
+  - non-task workflow automation
 references:
-  modules: [MOD-TOOLS-DISPATCH, MOD-ROUTER, MOD-PACK]
-  flows: [FLOW-TASK-RECORD, FLOW-TASK-PACK]
-  schemas: [SCH-TOOL-ENVELOPE, SCH-WRITE-TARGET, SCH-TASK-NODE]
-  governance: [GOV-CODE-PRINCIPLES, GOV-GIT-INDEX]
+  modules:
+  - MOD-TOOLS-DISPATCH
+  - MOD-ROUTER
+  - MOD-PACK
+  flows:
+  - FLOW-TASK-RECORD
+  - FLOW-TASK-PACK
+  schemas:
+  - SCH-TOOL-ENVELOPE
+  - SCH-WRITE-TARGET
+  - SCH-TASK-NODE
+  governance:
+  - GOV-CODE-PRINCIPLES
+  - GOV-GIT-INDEX
 deliverables: []
 verification: []
-links: [PLAN-MAIN]
+links:
+- PLAN-MAIN
 ---
 
 # Task: T-010-task-closeout-automation
@@ -80,6 +91,8 @@ links: [PLAN-MAIN]
 
 - Pending (do not fill until the task is completed)
 
+- closeout automation implemented
 ## Verification Result
 
 - Pending (do not fill until the task is completed)
+- automated checks passed
