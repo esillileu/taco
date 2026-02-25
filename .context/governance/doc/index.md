@@ -1,0 +1,37 @@
+---
+id: GOV-DOC-INDEX
+type: governance
+title: Documentation Conventions
+status: active
+domain: doc
+scope: repo
+must: []
+must_not: []
+links: [ARCH-INDEX, PLAN-MAIN]
+---
+
+# Documentation Guide
+
+## Structure
+
+- Canonical knowledge root is `.context/`.
+- Project design and execution docs live in `.context/project/`.
+- Governance rules live in `.context/governance/`.
+
+## Project Documents
+
+- `.context/project/overview.md`: project objective anchor.
+- `.context/project/plan.md`: thin execution map and active task links.
+- `.context/project/architecture/index.md`: architecture anchor.
+- `.context/project/architecture/modules/*`: module leaves.
+- `.context/project/architecture/flows/*`: flow leaves.
+- `.context/project/architecture/schemas/*`: schema leaves.
+- `.context/project/tasks/*`: executable task nodes.
+
+## Writing Rules
+
+- Every document must include valid front matter.
+- `id` is global and stable; references are `id-only`.
+- Task documents must keep scope/verification explicit.
+- Avoid copying architecture definitions into tasks.
+- Update links and references together when splitting documents.

@@ -13,7 +13,7 @@ TACO (Task Context Orchestrator) is a local MCP server that builds deterministic
 | `task.pack` | `taco task pack --task-id T-003 --budget-tokens 1800` |
 | `task.targets` | `taco task targets --task-id T-003 --route-type implementation_result` |
 | `task.record` | `taco task record --task-id T-003 --route-type implementation_result --content "done"` |
-| `doc.snippet` | `taco doc snippet --path docs/architecture.md --anchor-id system` |
+| `doc.snippet` | `taco doc snippet --path .context/project/architecture/index.md --anchor-id architecture-index` |
 | `issue.triage` | `taco issue triage --title "fix broken parser"` |
 | `convention.get` | `taco convention get --topic git` |
 
@@ -31,21 +31,18 @@ TACO (Task Context Orchestrator) is a local MCP server that builds deterministic
 
 ## Documentation Structure
 
-### SSOT (Human-facing)
+### Canonical Root
 
-- `docs/intent.md`
-- `docs/architecture.md`
-- `docs/plan.md`
-- `docs/glossary.md`
-
-### Operational (Agent-facing)
-
-- `docs/dev/docs.md`
-- `docs/dev/git.md`
-- `docs/dev/todo.md`
-- `docs/dev/principles.md`
-- `docs/dev/tasks/`
-- `docs/dev/git/`
+- `.context/project/overview.md`
+- `.context/project/plan.md`
+- `.context/project/architecture/index.md`
+- `.context/project/architecture/modules/`
+- `.context/project/architecture/flows/`
+- `.context/project/architecture/schemas/`
+- `.context/project/tasks/`
+- `.context/governance/code-principles.md`
+- `.context/governance/git/`
+- `.context/governance/doc/`
 
 ## Current Project Phase
 
