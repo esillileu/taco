@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from pathlib import Path
 import re
+from pathlib import Path
 from typing import Any
 
 import yaml
@@ -79,7 +79,9 @@ def validate_todo_links(todo_files: list[Path]) -> tuple[list[str], set[str]]:
     return errors, task_links
 
 
-def validate_todo_task_coverage(task_files: list[Path], todo_task_links: set[str]) -> list[str]:
+def validate_todo_task_coverage(
+    task_files: list[Path], todo_task_links: set[str]
+) -> list[str]:
     errors: list[str] = []
     expected = {p.relative_to(ROOT).as_posix() for p in task_files}
     missing = sorted(expected - todo_task_links)
