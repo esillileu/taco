@@ -2,36 +2,51 @@
 id: T-014
 type: task
 title: T-014-planner-view-locator-validator
-status: todo
+status: done
 plan_ref: PLAN-MAIN
 priority: p1
 estimate: l
 scope:
   in:
-    - src/taco/tools.py
-    - src/taco/indexer.py
-    - src/taco/pack.py
-    - tests/test_tools.py
-    - tests/test_integration_mcp_cli.py
-    - scripts/validate_docs.py
-    - .context/project/architecture/flows/mode-transition.md
+  - src/taco/tools.py
+  - src/taco/indexer.py
+  - src/taco/pack.py
+  - tests/test_tools.py
+  - tests/test_integration_mcp_cli.py
+  - scripts/validate_docs.py
+  - .context/project/architecture/flows/mode-transition.md
   out:
-    - 전체 문서 요약 생성기
-    - LLM 기반 비결정적 추천 로직
+  - "\uC804\uCCB4 \uBB38\uC11C \uC694\uC57D \uC0DD\uC131\uAE30"
+  - "LLM \uAE30\uBC18 \uBE44\uACB0\uC815\uC801 \uCD94\uCC9C \uB85C\uC9C1"
 references:
-  modules: [MOD-TOOLS-DISPATCH, MOD-INDEXER, MOD-PACK]
-  flows: [FLOW-MODE-TRANSITION, FLOW-TASK-PACK, FLOW-TOOL-DISPATCH]
-  schemas: [SCH-INDEX-GRAPH, SCH-TASK-NODE, SCH-TOOL-ENVELOPE, SCH-TOOL-ERROR]
-  governance: [GOV-CODE-PRINCIPLES, GOV-DOC-INDEX]
+  modules:
+  - MOD-TOOLS-DISPATCH
+  - MOD-INDEXER
+  - MOD-PACK
+  flows:
+  - FLOW-MODE-TRANSITION
+  - FLOW-TASK-PACK
+  - FLOW-TOOL-DISPATCH
+  schemas:
+  - SCH-INDEX-GRAPH
+  - SCH-TASK-NODE
+  - SCH-TOOL-ENVELOPE
+  - SCH-TOOL-ERROR
+  governance:
+  - GOV-CODE-PRINCIPLES
+  - GOV-DOC-INDEX
 deliverables:
-  - plan mode용 조회(view) 툴 세트
-  - 작성 위치(locator) 제안 툴
-  - 검증(validator) 결과 envelope 표준화
+- "plan mode\uC6A9 \uC870\uD68C(view) \uD234 \uC138\uD2B8"
+- "\uC791\uC131 \uC704\uCE58(locator) \uC81C\uC548 \uD234"
+- "\uAC80\uC99D(validator) \uACB0\uACFC envelope \uD45C\uC900\uD654"
 verification:
-  - uv run --extra dev pytest -q
-  - uv run --extra dev ruff check .
-  - uv run --extra dev mypy .
-links: [PLAN-MAIN, FLOW-MODE-TRANSITION, ARCH-INDEX]
+- uv run --extra dev pytest -q
+- uv run --extra dev ruff check .
+- uv run --extra dev mypy .
+links:
+- PLAN-MAIN
+- FLOW-MODE-TRANSITION
+- ARCH-INDEX
 ---
 
 # Task: T-014-planner-view-locator-validator
@@ -87,6 +102,9 @@ links: [PLAN-MAIN, FLOW-MODE-TRANSITION, ARCH-INDEX]
 
 - Pending (do not fill until the task is completed)
 
+- Added planner tool surface: plan.view, plan.locate, plan.validate with CLI parity and deterministic summaries/candidate ordering
+- planner surface implemented
 ## Verification Result
 
 - Pending (do not fill until the task is completed)
+- checks and dogfooding passed
