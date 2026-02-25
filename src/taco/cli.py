@@ -66,6 +66,22 @@ def map_cli_to_tool(
                 )
             complete_payload["dry_run"] = dry_run
         return "task.complete", complete_payload
+    if domain == "task" and action == "block":
+        block_payload: dict[str, Any] = {
+            "task_id": _required_str(options, "task_id"),
+            "reason_code": _required_str(options, "reason_code"),
+            "reason": _required_str(options, "reason"),
+        }
+        dry_run = options.get("dry_run")
+        if dry_run is not None:
+            if not isinstance(dry_run, bool):
+                raise CliError(
+                    "invalid_option",
+                    "dry_run must be boolean",
+                    {"key": "dry_run"},
+                )
+            block_payload["dry_run"] = dry_run
+        return "task.block", block_payload
     if domain == "doc" and action == "snippet":
         return "doc.snippet", {
             "path": _required_str(options, "path"),

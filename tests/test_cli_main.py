@@ -222,3 +222,25 @@ def test_cli_main_returns_error_code_for_invalid_input(tmp_path: Path, capsys) -
     assert code == 1
     assert output["ok"] is False
     assert output["error"]["code"] in {"invalid_option", "invalid_input"}
+
+
+def test_cli_main_task_block_dry_run(tmp_path: Path, capsys) -> None:
+    _write_fixture_repo(tmp_path)
+    code = main(
+        [
+            "task",
+            "block",
+            "--task-id",
+            "T-008",
+            "--reason-code",
+            "scope_split_required",
+            "--reason",
+            "split task",
+        ],
+        cwd=tmp_path,
+    )
+    output = json.loads(capsys.readouterr().out)
+    assert code == 0
+    assert output["ok"] is True
+    assert output["data"]["applied"] is False
+    assert output["data"]["status_to"] == "blocked"

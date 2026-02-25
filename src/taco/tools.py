@@ -30,6 +30,14 @@ class RepoState:
     task_required_headings: tuple[str, ...] = ()
 
 
+BLOCK_REASON_CODES = (
+    "architecture_change_required",
+    "scope_split_required",
+    "verification_ambiguous",
+    "dependency_out_of_scope",
+)
+
+
 class ToolError(ValueError):
     def __init__(
         self, code: str, message: str, details: dict[str, str | int] | None = None
@@ -77,6 +85,7 @@ def call_tool(state: RepoState, name: str, args: dict[str, Any]) -> dict[str, An
         "task.targets": _task_targets,
         "task.record": _task_record,
         "task.complete": _task_complete,
+        "task.block": _task_block,
         "doc.snippet": _doc_snippet,
         "issue.triage": _issue_triage,
         "convention.get": _convention_get,
@@ -242,6 +251,95 @@ def _task_complete(state: RepoState, args: dict[str, Any]) -> dict[str, Any]:
             "implementation": implementation_target.to_dict(),
             "verification": verification_target.to_dict(),
         },
+    }
+
+
+def _task_block(state: RepoState, args: dict[str, Any]) -> dict[str, Any]:
+    task_id = _required_str(args, "task_id")
+    reason_code = _required_str(args, "reason_code")
+    reason = _required_str(args, "reason")
+    dry_run = args.get("dry_run", True)
+    if not isinstance(dry_run, bool):
+        raise ToolError("invalid_input", "dry_run must be boolean", {"key": "dry_run"})
+    if reason_code not in BLOCK_REASON_CODES:
+        raise ToolError(
+            "invalid_reason_code",
+            "reason_code is not supported",
+            {"reason_code": reason_code},
+        )
+
+    task_path = state.index.task_index.get(task_id)
+    if not task_path:
+        raise ToolError(
+            "task_not_found",
+            "task id not found in index",
+            {"task_id": task_id},
+        )
+
+    task_file = state.root / task_path
+    task_text = task_file.read_text(encoding="utf-8")
+    task_meta, _ = _split_front_matter(task_text)
+    status = task_meta.get("status")
+    if isinstance(status, str) and status.strip() == "done":
+        raise ToolError(
+            "task_state_conflict",
+            "done task cannot be blocked",
+            {"task_id": task_id, "status": "done"},
+        )
+    if isinstance(status, str) and status.strip() == "blocked":
+        raise ToolError(
+            "task_already_blocked",
+            "task is already marked blocked",
+            {"task_id": task_id},
+        )
+
+    implementation_target = resolve_write_target(
+        task_id, "implementation", state.index, state.router_config
+    )
+    updated_task = _append_under_heading(
+        task_text,
+        implementation_target.heading,
+        f"- blocked: [{reason_code}] {reason}",
+    )
+    updated_task = _set_front_matter_key(updated_task, "status", "blocked")
+
+    plan_path = _plan_path_from_config(state.config_raw)
+    plan_file = state.root / plan_path
+    plan_text = plan_file.read_text(encoding="utf-8")
+    updated_plan, promoted = _advance_plan_for_blocked_task(
+        plan_text,
+        blocked_task_id=task_id,
+        task_index=state.index.task_index,
+        plan_path=plan_path,
+    )
+
+    if dry_run:
+        return {
+            "task_id": task_id,
+            "applied": False,
+            "reason_code": reason_code,
+            "reason": reason,
+            "status_from": status if isinstance(status, str) else "unknown",
+            "status_to": "blocked",
+            "next_active_task": promoted,
+            "task_target": task_path,
+            "plan_target": plan_path,
+            "task_preview": _preview_change(task_text, updated_task),
+            "plan_preview": _preview_change(plan_text, updated_plan),
+        }
+
+    task_file.write_text(updated_task, encoding="utf-8")
+    plan_file.write_text(updated_plan, encoding="utf-8")
+    return {
+        "task_id": task_id,
+        "applied": True,
+        "reason_code": reason_code,
+        "reason": reason,
+        "status_from": status if isinstance(status, str) else "unknown",
+        "status_to": "blocked",
+        "next_active_task": promoted,
+        "task_target": task_path,
+        "plan_target": plan_path,
     }
 
 
@@ -607,15 +705,19 @@ def _advance_plan_for_completed_task(
             {"document": "plan"},
         )
     active = meta.get("active_tasks", [])
+    blocked = meta.get("blocked_tasks", [])
     next_tasks = meta.get("next_tasks", [])
-    if not isinstance(active, list) or not isinstance(next_tasks, list):
+    if not isinstance(active, list) or not isinstance(blocked, list) or not isinstance(
+        next_tasks, list
+    ):
         raise ToolError(
             "invalid_plan_meta",
-            "active_tasks and next_tasks must be arrays",
+            "active_tasks, blocked_tasks, and next_tasks must be arrays",
             {"document": "plan"},
         )
 
     active_clean = [item for item in active if isinstance(item, str)]
+    blocked_clean = [item for item in blocked if isinstance(item, str)]
     next_clean = [item for item in next_tasks if isinstance(item, str)]
 
     active_clean = [item for item in active_clean if item != completed_task_id]
@@ -630,12 +732,14 @@ def _advance_plan_for_completed_task(
         active_clean.append(promoted)
 
     meta["active_tasks"] = active_clean
+    meta["blocked_tasks"] = blocked_clean
     meta["next_tasks"] = remaining_next
     next_body = _sync_plan_task_sections(
         body=body,
         plan_path=plan_path,
         task_index=task_index,
         active_tasks=active_clean,
+        blocked_tasks=blocked_clean,
         next_tasks=remaining_next,
     )
     return _compose_front_matter(meta, next_body), promoted
@@ -646,6 +750,7 @@ def _sync_plan_task_sections(
     plan_path: str,
     task_index: dict[str, str],
     active_tasks: list[str],
+    blocked_tasks: list[str],
     next_tasks: list[str],
 ) -> str:
     lines = body.splitlines()
@@ -656,10 +761,74 @@ def _sync_plan_task_sections(
     )
     lines = _replace_plan_task_section(
         lines,
+        section_heading="Blocked Tasks",
+        entries=_format_plan_task_entries(blocked_tasks, plan_path, task_index),
+    )
+    lines = _replace_plan_task_section(
+        lines,
         section_heading="Next Tasks",
         entries=_format_plan_task_entries(next_tasks, plan_path, task_index),
     )
     return "\n".join(lines).rstrip()
+
+
+def _advance_plan_for_blocked_task(
+    plan_text: str,
+    blocked_task_id: str,
+    task_index: dict[str, str],
+    plan_path: str,
+) -> tuple[str, str | None]:
+    meta, body = _split_front_matter(plan_text)
+    if not meta:
+        raise ToolError(
+            "front_matter_missing",
+            "plan front matter is required",
+            {"document": "plan"},
+        )
+
+    active = meta.get("active_tasks", [])
+    blocked = meta.get("blocked_tasks", [])
+    next_tasks = meta.get("next_tasks", [])
+    if not isinstance(active, list) or not isinstance(blocked, list) or not isinstance(
+        next_tasks, list
+    ):
+        raise ToolError(
+            "invalid_plan_meta",
+            "active_tasks, blocked_tasks, and next_tasks must be arrays",
+            {"document": "plan"},
+        )
+
+    active_clean = [item for item in active if isinstance(item, str)]
+    blocked_clean = [item for item in blocked if isinstance(item, str)]
+    next_clean = [item for item in next_tasks if isinstance(item, str)]
+
+    active_clean = [item for item in active_clean if item != blocked_task_id]
+    next_clean = [item for item in next_clean if item != blocked_task_id]
+    if blocked_task_id not in blocked_clean:
+        blocked_clean.append(blocked_task_id)
+
+    promoted: str | None = None
+    remaining_next: list[str] = []
+    for item in next_clean:
+        if promoted is None and item in task_index and item not in blocked_clean:
+            promoted = item
+            continue
+        remaining_next.append(item)
+    if promoted and promoted not in active_clean:
+        active_clean.append(promoted)
+
+    meta["active_tasks"] = active_clean
+    meta["blocked_tasks"] = blocked_clean
+    meta["next_tasks"] = remaining_next
+    next_body = _sync_plan_task_sections(
+        body=body,
+        plan_path=plan_path,
+        task_index=task_index,
+        active_tasks=active_clean,
+        blocked_tasks=blocked_clean,
+        next_tasks=remaining_next,
+    )
+    return _compose_front_matter(meta, next_body), promoted
 
 
 def _replace_plan_task_section(

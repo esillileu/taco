@@ -38,6 +38,12 @@ def build_parser() -> argparse.ArgumentParser:
     task_complete.add_argument("--verification", required=True)
     task_complete.add_argument("--apply", action="store_true")
 
+    task_block = task_sub.add_parser("block")
+    task_block.add_argument("--task-id", required=True)
+    task_block.add_argument("--reason-code", required=True)
+    task_block.add_argument("--reason", required=True)
+    task_block.add_argument("--apply", action="store_true")
+
     doc_parser = domain_subparsers.add_parser("doc")
     doc_sub = doc_parser.add_subparsers(dest="action", required=True)
     doc_snippet = doc_sub.add_parser("snippet")
@@ -104,6 +110,10 @@ def _to_options(args: argparse.Namespace) -> dict[str, Any]:
         options["implementation"] = args.implementation
     if getattr(args, "verification", None) is not None:
         options["verification"] = args.verification
+    if getattr(args, "reason_code", None) is not None:
+        options["reason_code"] = args.reason_code
+    if getattr(args, "reason", None) is not None:
+        options["reason"] = args.reason
     if getattr(args, "path", None) is not None:
         options["path"] = args.path
     if getattr(args, "anchor_id", None) is not None:
