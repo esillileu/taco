@@ -59,8 +59,40 @@
 
 ## Implementation Result
 
-- Pending (do not fill until the task is completed)
+- Added tool-surface orchestration module at `src/taco/tools.py`.
+- Implemented canonical MCP tool handlers:
+  - `task.list`
+  - `task.pack`
+  - `task.targets`
+  - `task.record`
+  - `doc.snippet`
+  - `issue.triage`
+  - `convention.get`
+- Implemented unified response envelope:
+  - success: `{ "ok": true, "data": ... }`
+  - failure: `{ "ok": false, "error": { "code", "message", "details" } }`
+- Implemented repo-state loader:
+  - `load_repo_state(root, config_path)` using `taco.yaml`
+  - integrates `index`, `budget`, and `router` configs
+- Implemented tool dispatcher:
+  - `call_tool(state, name, args)` with consistent error mapping
+- Implemented `task.record` dry-run and apply behavior:
+  - dry-run preview output
+  - append behavior under routed heading for non-dry-run mode
+- Kept handler logic aligned with canonical naming and CLI parity assumptions.
 
 ## Verification Result
 
-- Pending (do not fill until the task is completed)
+- Added tool-level behavior tests in `tests/test_tools.py` covering:
+  - unknown tool error envelope
+  - `task.list`/`task.pack`/`task.targets`
+  - `doc.snippet`
+  - `issue.triage`
+  - `convention.get`
+  - `task.record` dry-run
+  - `load_repo_state` with config loading
+- Verification commands:
+  - `uv run --extra dev ruff check .` -> pass
+  - `uv run --extra dev mypy .` -> pass
+  - `uv run --extra dev pytest -q` -> pass
+  - `uv run --extra dev python scripts/validate_docs.py` -> pass
