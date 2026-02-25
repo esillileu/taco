@@ -13,6 +13,7 @@ next_tasks:
 - T-013
 - T-014
 - T-015
+- T-016
 milestones:
 - M1-front-matter-migration
 - M2-architecture-alignment
@@ -90,6 +91,11 @@ links:
 - Keep machine envelope as default.
 - Ensure parity between CLI behavior and MCP contract.
 
+### Phase 6 Task Breakdown
+
+- `T-015`: Init/bootstrap command for context scaffolding
+- `T-016`: Human-readable CLI context output mode
+
 ## Phase 7: Rust Migration Readiness
 
 - Freeze DTO/error envelope contracts at tool boundary.
@@ -122,7 +128,8 @@ links:
 - [T-012](./tasks/T-012-plan-build-readiness-gate.md)
 - [T-013](./tasks/T-013-build-plan-fallback-state.md)
 - [T-014](./tasks/T-014-planner-view-locator-validator.md)
-- [T-015](./tasks/T-015-cli-human-context-view.md)
+- [T-015](./tasks/T-015-init-context-bootstrap.md)
+- [T-016](./tasks/T-016-cli-human-context-view.md)
 - [T-000](./tasks/T-000-bootstrap.md)
 - [T-001](./tasks/T-001-parser-foundation.md)
 - [T-002](./tasks/T-002-indexer-foundation.md)
