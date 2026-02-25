@@ -7,16 +7,29 @@ plan_ref: PLAN-MAIN
 priority: p1
 estimate: m
 scope:
-  in: []
-  out: []
+  in:
+    - src/taco/main.py
+    - src/taco/cli.py
+    - tests/test_cli_main.py
+    - tests/test_integration_mcp_cli.py
+  out:
+    - MCP tool payload/response contract change
+    - task/doc tool semantics change
 references:
   modules: [MOD-PACK, MOD-INDEXER]
   flows: [FLOW-TASK-PACK]
   schemas: [SCH-PACK-RESULT]
   governance: [GOV-CODE-PRINCIPLES, GOV-GIT-INDEX]
-deliverables: []
-verification: []
-links: []
+deliverables:
+  - CLI global option for human-readable context output
+  - renderer branch for `task pack` and `doc snippet` human output
+  - deterministic output ordering and unsupported-command guard
+verification:
+  - uv run --extra dev ruff check .
+  - uv run --extra dev mypy .
+  - uv run --extra dev pytest -q
+  - uv run --extra dev python scripts/validate_docs.py
+links: [PLAN-MAIN, ARCH-INDEX, FLOW-TASK-PACK]
 ---
 
 # Task: T-015-cli-human-context-view
