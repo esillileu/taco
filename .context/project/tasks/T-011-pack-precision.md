@@ -1,7 +1,7 @@
 ---
-id: T-010
+id: T-011
 type: task
-title: T-010-pack-precision
+title: T-011-pack-precision
 status: active
 plan_ref: PLAN-MAIN
 priority: p1
@@ -23,7 +23,7 @@ verification: []
 links: [PLAN-MAIN]
 ---
 
-# Task: T-010-pack-precision
+# Task: T-011-pack-precision
 
 ## Intent
 

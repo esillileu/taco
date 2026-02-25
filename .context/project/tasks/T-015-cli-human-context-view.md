@@ -1,7 +1,7 @@
 ---
-id: T-014
+id: T-015
 type: task
-title: T-014-cli-human-context-view
+title: T-015-cli-human-context-view
 status: todo
 plan_ref: PLAN-MAIN
 priority: p1
@@ -19,7 +19,7 @@ verification: []
 links: []
 ---
 
-# Task: T-014-cli-human-context-view
+# Task: T-015-cli-human-context-view
 
 > Add a CLI mode that shows human-readable context only, without full tool envelope noise.
 

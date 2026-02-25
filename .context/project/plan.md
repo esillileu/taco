@@ -13,6 +13,7 @@ next_tasks:
   - T-012
   - T-013
   - T-014
+  - T-015
 milestones:
   - M1-front-matter-migration
   - M2-architecture-alignment
@@ -98,12 +99,15 @@ links:
 
 ## Active Tasks
 
-- [T-010](./tasks/T-010-pack-precision.md)
+- [T-010](./tasks/T-010-task-closeout-automation.md)
 
 ## Next Tasks
 
-- [T-009](./tasks/T-009-pack-readiness-performance.md)
-- [T-014](./tasks/T-014-cli-human-context-view.md)
+- [T-011](./tasks/T-011-pack-precision.md)
+- [T-012](./tasks/T-012-placeholder.md)
+- [T-013](./tasks/T-013-placeholder.md)
+- [T-014](./tasks/T-014-placeholder.md)
+- [T-015](./tasks/T-015-cli-human-context-view.md)
 - [T-000](./tasks/T-000-bootstrap.md)
 - [T-001](./tasks/T-001-parser-foundation.md)
 - [T-002](./tasks/T-002-indexer-foundation.md)
