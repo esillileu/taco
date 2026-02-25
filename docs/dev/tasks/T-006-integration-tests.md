@@ -54,8 +54,24 @@
 
 ## Implementation Result
 
-- Pending (do not fill until the task is completed)
+- Added CLI-to-tool mapping module at `src/taco/cli.py`:
+  - `map_cli_to_tool(domain, action, options)` for canonical command mapping
+  - standardized CLI error model `CliError`
+- Added integration test suite at `tests/test_integration_mcp_cli.py` with fixture-repo setup.
+- Integration tests cover:
+  - all canonical MCP tools happy path
+  - invalid input and missing resource errors
+  - deterministic repeatability for `task.pack`
+  - CLI mapping parity against direct MCP tool calls
+- Kept tests behavior-focused at tool boundary and response envelope level.
 
 ## Verification Result
 
-- Pending (do not fill until the task is completed)
+- Verification commands:
+  - `uv run --extra dev ruff check .` -> pass
+  - `uv run --extra dev mypy .` -> pass
+  - `uv run --extra dev pytest -q` -> pass
+  - `uv run --extra dev python scripts/validate_docs.py` -> pass
+- Current parity gate status:
+  - Python-side golden behavior tests are in place.
+  - Rust parity remains pending until Rust runtime implementation starts.
