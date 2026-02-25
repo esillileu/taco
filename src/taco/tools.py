@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -89,6 +90,9 @@ def call_tool(state: RepoState, name: str, args: dict[str, Any]) -> dict[str, An
         "doc.snippet": _doc_snippet,
         "issue.triage": _issue_triage,
         "convention.get": _convention_get,
+        "plan.view": _plan_view,
+        "plan.locate": _plan_locate,
+        "plan.validate": _plan_validate,
     }
     handler = handlers.get(name)
     if handler is None:
@@ -217,6 +221,7 @@ def _task_complete(state: RepoState, args: dict[str, Any]) -> dict[str, Any]:
         plan_text,
         completed_task_id=task_id,
         task_index=state.index.task_index,
+        task_documents=state.index.documents,
         plan_path=plan_path,
     )
 
@@ -310,6 +315,7 @@ def _task_block(state: RepoState, args: dict[str, Any]) -> dict[str, Any]:
         plan_text,
         blocked_task_id=task_id,
         task_index=state.index.task_index,
+        task_documents=state.index.documents,
         plan_path=plan_path,
     )
 
@@ -403,6 +409,203 @@ def _convention_get(state: RepoState, args: dict[str, Any]) -> dict[str, Any]:
         "topic": "git",
         "path": git_path,
     }
+
+
+def _plan_view(state: RepoState, __args: dict[str, Any]) -> dict[str, Any]:
+    plan_path = _plan_path_from_config(state.config_raw)
+    plan_text = state.index.document_texts.get(plan_path)
+    if plan_text is None:
+        plan_text = (state.root / plan_path).read_text(encoding="utf-8")
+    plan_meta, _body = _split_front_matter(plan_text)
+    if not plan_meta:
+        raise ToolError(
+            "front_matter_missing",
+            "plan front matter is required",
+            {"document": "plan"},
+        )
+
+    active_ids = [
+        item for item in plan_meta.get("active_tasks", []) if isinstance(item, str)
+    ]
+    blocked_ids = [
+        item for item in plan_meta.get("blocked_tasks", []) if isinstance(item, str)
+    ]
+    next_ids = [
+        item for item in plan_meta.get("next_tasks", []) if isinstance(item, str)
+    ]
+
+    return {
+        "plan": {
+            "path": plan_path,
+            "phase": plan_meta.get("phase", ""),
+            "focus": plan_meta.get("focus", ""),
+            "active_tasks": _task_summaries(active_ids, state.index),
+            "blocked_tasks": _task_summaries(blocked_ids, state.index),
+            "next_tasks": _task_summaries(next_ids, state.index),
+        },
+        "architecture": {
+            "modules": _collect_arch_nodes(state, "module"),
+            "flows": _collect_arch_nodes(state, "flow"),
+            "schemas": _collect_arch_nodes(state, "schema"),
+        },
+    }
+
+
+def _plan_locate(state: RepoState, args: dict[str, Any]) -> dict[str, Any]:
+    change_type = _required_str(args, "change_type").lower()
+    target = args.get("target", "")
+    if not isinstance(target, str):
+        raise ToolError("invalid_input", "target must be a string", {"key": "target"})
+
+    if change_type == "module":
+        doc_type = "module"
+    elif change_type == "flow":
+        doc_type = "flow"
+    elif change_type == "schema":
+        doc_type = "schema"
+    elif change_type == "task":
+        doc_type = "task"
+    elif change_type == "plan":
+        doc_type = "plan"
+    elif change_type == "governance":
+        doc_type = "governance"
+    else:
+        raise ToolError(
+            "invalid_change_type",
+            "change_type is not supported",
+            {"change_type": change_type},
+        )
+
+    candidates: list[dict[str, Any]] = []
+    lowered = target.strip().lower()
+    for doc in state.index.documents:
+        if doc.doc_type != doc_type:
+            continue
+        title = doc.metadata.get("title", "") if isinstance(doc.metadata, dict) else ""
+        node_id = doc.node_id or ""
+        text = f"{doc.path} {title} {node_id}".lower()
+        if lowered and lowered not in text:
+            continue
+        candidates.append(
+            {
+                "path": doc.path,
+                "id": node_id,
+                "title": title,
+                "type": doc.doc_type,
+            }
+        )
+
+    candidates.sort(key=lambda item: (str(item["path"]), str(item["id"])))
+    primary = candidates[0] if candidates else None
+    return {
+        "change_type": change_type,
+        "target": target.strip(),
+        "primary": primary,
+        "candidates": candidates[:12],
+        "count": len(candidates),
+    }
+
+
+def _plan_validate(state: RepoState, _: dict[str, Any]) -> dict[str, Any]:
+    script_path = state.root / "scripts" / "validate_docs.py"
+    if not script_path.exists():
+        errors = _fallback_plan_validation(state)
+        return {
+            "valid": len(errors) == 0,
+            "error_count": len(errors),
+            "errors": errors,
+        }
+
+    spec = importlib.util.spec_from_file_location("taco_validate_docs", script_path)
+    if spec is None or spec.loader is None:
+        raise ToolError(
+            "validator_load_failed",
+            "unable to load validator module",
+            {"path": "scripts/validate_docs.py"},
+        )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    module_any: Any = module
+    module_any.ROOT = state.root
+    module_any.CONFIG_PATH = state.root / "taco.yaml"
+
+    config = module.load_config()
+    errors = module.validate_config_paths(config)
+    files = module.all_context_docs()
+    if not files:
+        errors.append(".context: no markdown documents found")
+    fm_errors, id_to_path, fm_by_path = module.validate_front_matter(files)
+    errors.extend(fm_errors)
+    if files and not fm_errors:
+        errors.extend(module.validate_references(id_to_path, fm_by_path))
+
+    return {
+        "valid": len(errors) == 0,
+        "error_count": len(errors),
+        "errors": errors,
+    }
+
+
+def _task_summaries(task_ids: list[str], index: IndexGraph) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for task_id in task_ids:
+        path = index.task_index.get(task_id, "")
+        doc = next((item for item in index.documents if item.path == path), None)
+        title = ""
+        status = ""
+        if doc and isinstance(doc.metadata, dict):
+            title = str(doc.metadata.get("title", ""))
+            status = str(doc.metadata.get("status", ""))
+        rows.append(
+            {
+                "task_id": task_id,
+                "path": path,
+                "status": status,
+                "title": title,
+            }
+        )
+    return rows
+
+
+def _collect_arch_nodes(state: RepoState, doc_type: str) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for doc in state.index.documents:
+        if doc.doc_type != doc_type:
+            continue
+        title = doc.metadata.get("title", "") if isinstance(doc.metadata, dict) else ""
+        rows.append(
+            {
+                "id": doc.node_id or "",
+                "path": doc.path,
+                "title": title,
+            }
+        )
+    rows.sort(key=lambda item: (str(item["path"]), str(item["id"])))
+    return rows
+
+
+def _fallback_plan_validation(state: RepoState) -> list[str]:
+    errors: list[str] = []
+    if not state.index.documents:
+        errors.append(".context: no markdown documents found")
+    ids = [doc.node_id for doc in state.index.documents if doc.node_id]
+    if len(ids) != len(set(ids)):
+        errors.append("duplicate id detected in index")
+    return errors
+
+
+def _is_promotable_task(task_id: str, task_documents: tuple[Any, ...]) -> bool:
+    for doc in task_documents:
+        if getattr(doc, "task_id", None) != task_id:
+            continue
+        meta = getattr(doc, "metadata", {})
+        if not isinstance(meta, dict):
+            return True
+        status = meta.get("status")
+        if isinstance(status, str) and status.strip() in {"done", "blocked"}:
+            return False
+        return True
+    return True
 
 
 def _append_under_heading(markdown_text: str, heading: str, line: str) -> str:
@@ -695,6 +898,7 @@ def _advance_plan_for_completed_task(
     plan_text: str,
     completed_task_id: str,
     task_index: dict[str, str],
+    task_documents: tuple[Any, ...],
     plan_path: str,
 ) -> tuple[str, str | None]:
     meta, body = _split_front_matter(plan_text)
@@ -719,12 +923,24 @@ def _advance_plan_for_completed_task(
     active_clean = [item for item in active if isinstance(item, str)]
     blocked_clean = [item for item in blocked if isinstance(item, str)]
     next_clean = [item for item in next_tasks if isinstance(item, str)]
+    active_clean = [
+        item for item in active_clean if _is_promotable_task(item, task_documents)
+    ]
+    next_clean = [
+        item for item in next_clean if _is_promotable_task(item, task_documents)
+    ]
 
     active_clean = [item for item in active_clean if item != completed_task_id]
+    next_clean = [item for item in next_clean if item != completed_task_id]
     promoted: str | None = None
     remaining_next: list[str] = []
     for item in next_clean:
-        if promoted is None and item in task_index and item not in active_clean:
+        if (
+            promoted is None
+            and item in task_index
+            and item not in active_clean
+            and _is_promotable_task(item, task_documents)
+        ):
             promoted = item
             continue
         remaining_next.append(item)
@@ -776,6 +992,7 @@ def _advance_plan_for_blocked_task(
     plan_text: str,
     blocked_task_id: str,
     task_index: dict[str, str],
+    task_documents: tuple[Any, ...],
     plan_path: str,
 ) -> tuple[str, str | None]:
     meta, body = _split_front_matter(plan_text)
@@ -801,6 +1018,12 @@ def _advance_plan_for_blocked_task(
     active_clean = [item for item in active if isinstance(item, str)]
     blocked_clean = [item for item in blocked if isinstance(item, str)]
     next_clean = [item for item in next_tasks if isinstance(item, str)]
+    active_clean = [
+        item for item in active_clean if _is_promotable_task(item, task_documents)
+    ]
+    next_clean = [
+        item for item in next_clean if _is_promotable_task(item, task_documents)
+    ]
 
     active_clean = [item for item in active_clean if item != blocked_task_id]
     next_clean = [item for item in next_clean if item != blocked_task_id]
@@ -810,7 +1033,12 @@ def _advance_plan_for_blocked_task(
     promoted: str | None = None
     remaining_next: list[str] = []
     for item in next_clean:
-        if promoted is None and item in task_index and item not in blocked_clean:
+        if (
+            promoted is None
+            and item in task_index
+            and item not in blocked_clean
+            and _is_promotable_task(item, task_documents)
+        ):
             promoted = item
             continue
         remaining_next.append(item)

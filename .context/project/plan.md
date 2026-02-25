@@ -11,8 +11,6 @@ active_tasks:
 - T-012
 blocked_tasks: []
 next_tasks:
-- T-013
-- T-014
 - T-015
 - T-016
 milestones:
@@ -127,7 +125,5 @@ links:
 
 ## Next Tasks
 
-- [T-013](./tasks/T-013-build-plan-fallback-state.md)
-- [T-014](./tasks/T-014-planner-view-locator-validator.md)
 - [T-015](./tasks/T-015-init-context-bootstrap.md)
 - [T-016](./tasks/T-016-cli-human-context-view.md)

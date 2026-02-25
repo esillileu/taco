@@ -102,6 +102,9 @@ Architecture anchor for modules, flows, and schemas. This document is global SSO
 - `doc.snippet`
 - `issue.triage`
 - `convention.get`
+- `plan.view`
+- `plan.locate`
+- `plan.validate`
 
 ## Source Mapping
 

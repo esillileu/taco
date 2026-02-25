@@ -60,6 +60,14 @@ def build_parser() -> argparse.ArgumentParser:
     conv_get = conv_sub.add_parser("get")
     conv_get.add_argument("--topic", default="git")
 
+    plan_parser = domain_subparsers.add_parser("plan")
+    plan_sub = plan_parser.add_subparsers(dest="action", required=True)
+    plan_sub.add_parser("view")
+    plan_locate = plan_sub.add_parser("locate")
+    plan_locate.add_argument("--change-type", required=True)
+    plan_locate.add_argument("--target", default="")
+    plan_sub.add_parser("validate")
+
     return parser
 
 
@@ -122,6 +130,10 @@ def _to_options(args: argparse.Namespace) -> dict[str, Any]:
         options["title"] = args.title
     if getattr(args, "topic", None) is not None:
         options["topic"] = args.topic
+    if getattr(args, "change_type", None) is not None:
+        options["change_type"] = args.change_type
+    if getattr(args, "target", None) is not None:
+        options["target"] = args.target
     if getattr(args, "budget_tokens", None) is not None:
         options["budget_tokens"] = args.budget_tokens
     if hasattr(args, "apply"):

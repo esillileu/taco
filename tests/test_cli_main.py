@@ -215,6 +215,15 @@ def test_cli_main_task_pack_and_doc_snippet(tmp_path: Path, capsys) -> None:
     assert snip_output["ok"] is True
 
 
+def test_cli_main_plan_view(tmp_path: Path, capsys) -> None:
+    _write_fixture_repo(tmp_path)
+    code = main(["plan", "view"], cwd=tmp_path)
+    output = json.loads(capsys.readouterr().out)
+    assert code == 0
+    assert output["ok"] is True
+    assert "plan" in output["data"]
+
+
 def test_cli_main_returns_error_code_for_invalid_input(tmp_path: Path, capsys) -> None:
     _write_fixture_repo(tmp_path)
     code = main(["task", "pack", "--task-id", ""], cwd=tmp_path)
