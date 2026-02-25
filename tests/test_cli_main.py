@@ -11,10 +11,33 @@ from taco.main import main
 def _write_fixture_repo(root: Path) -> None:
     (root / "docs" / "dev" / "tasks").mkdir(parents=True)
     (root / "docs" / "dev").mkdir(exist_ok=True)
-    (root / "docs" / "intent.md").write_text("# Intent\n", encoding="utf-8")
+    (root / "docs" / "intent.md").write_text(
+        "\n".join(
+            [
+                "---",
+                "id: PROJ-INTENT",
+                "type: anchor",
+                "title: Intent",
+                "status: active",
+                "links: []",
+                "---",
+                "",
+                "# Intent",
+            ]
+        ),
+        encoding="utf-8",
+    )
     (root / "docs" / "architecture.md").write_text(
         "\n".join(
             [
+                "---",
+                "id: ARCH-INDEX",
+                "type: anchor",
+                "title: Architecture",
+                "status: active",
+                "links: []",
+                "---",
+                "",
                 "# Architecture",
                 "## System",
                 "<!-- taco:pack=arch.snippets -->",
@@ -23,10 +46,36 @@ def _write_fixture_repo(root: Path) -> None:
         ),
         encoding="utf-8",
     )
-    (root / "docs" / "plan.md").write_text("# Plan\n", encoding="utf-8")
+    (root / "docs" / "plan.md").write_text(
+        "\n".join(
+            [
+                "---",
+                "id: PLAN-MAIN",
+                "type: plan",
+                "title: Plan",
+                "status: active",
+                "active_tasks: []",
+                "blocked_tasks: []",
+                "next_tasks: []",
+                "links: []",
+                "---",
+                "",
+                "# Plan",
+            ]
+        ),
+        encoding="utf-8",
+    )
     (root / "docs" / "glossary.md").write_text(
         "\n".join(
             [
+                "---",
+                "id: SCH-GLOSSARY",
+                "type: schema",
+                "title: Glossary",
+                "status: active",
+                "links: []",
+                "---",
+                "",
                 "# Glossary",
                 "## Terms",
                 "<!-- taco:pack=glossary.terms -->",
@@ -38,6 +87,14 @@ def _write_fixture_repo(root: Path) -> None:
     (root / "docs" / "dev" / "principles.md").write_text(
         "\n".join(
             [
+                "---",
+                "id: GOV-CODE-PRINCIPLES",
+                "type: governance",
+                "title: Principles",
+                "status: active",
+                "links: []",
+                "---",
+                "",
                 "# Principles",
                 "## Rules",
                 "<!-- taco:pack=principles.snippets -->",
@@ -51,6 +108,23 @@ def _write_fixture_repo(root: Path) -> None:
     (root / "docs" / "dev" / "tasks" / "T-008-cli-entrypoint.md").write_text(
         "\n".join(
             [
+                "---",
+                "id: T-008",
+                "type: task",
+                "title: T-008-cli-entrypoint",
+                "status: active",
+                "plan_ref: PLAN-MAIN",
+                "scope:",
+                "  in: []",
+                "  out: []",
+                "references:",
+                "  modules: [ARCH-INDEX]",
+                "  flows: [PLAN-MAIN]",
+                "  schemas: [GOV-CODE-PRINCIPLES]",
+                "  governance: [GOV-CODE-PRINCIPLES]",
+                "links: [PLAN-MAIN]",
+                "---",
+                "",
                 "# Task: T-008-cli-entrypoint",
                 "## Intent",
                 "<!-- taco:pack=task.core -->",

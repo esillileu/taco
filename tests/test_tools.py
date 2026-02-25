@@ -12,11 +12,34 @@ from taco.tools import RepoState, call_tool, load_repo_state
 
 def _state(tmp_path: Path) -> RepoState:
     docs = [
-        DocumentInput.from_text("docs/intent.md", "# Intent\n"),
+        DocumentInput.from_text(
+            "docs/intent.md",
+            "\n".join(
+                [
+                    "---",
+                    "id: PROJ-INTENT",
+                    "type: anchor",
+                    "title: Intent",
+                    "status: active",
+                    "links: []",
+                    "---",
+                    "",
+                    "# Intent",
+                ]
+            ),
+        ),
         DocumentInput.from_text(
             "docs/architecture.md",
             "\n".join(
                 [
+                    "---",
+                    "id: ARCH-INDEX",
+                    "type: anchor",
+                    "title: Architecture",
+                    "status: active",
+                    "links: []",
+                    "---",
+                    "",
                     "# Architecture",
                     "## System",
                     "<!-- taco:pack=arch.snippets -->",
@@ -24,11 +47,37 @@ def _state(tmp_path: Path) -> RepoState:
                 ]
             ),
         ),
-        DocumentInput.from_text("docs/plan.md", "# Plan\n"),
+        DocumentInput.from_text(
+            "docs/plan.md",
+            "\n".join(
+                [
+                    "---",
+                    "id: PLAN-MAIN",
+                    "type: plan",
+                    "title: Plan",
+                    "status: active",
+                    "active_tasks: []",
+                    "blocked_tasks: []",
+                    "next_tasks: []",
+                    "links: []",
+                    "---",
+                    "",
+                    "# Plan",
+                ]
+            ),
+        ),
         DocumentInput.from_text(
             "docs/glossary.md",
             "\n".join(
                 [
+                    "---",
+                    "id: SCH-GLOSSARY",
+                    "type: schema",
+                    "title: Glossary",
+                    "status: active",
+                    "links: []",
+                    "---",
+                    "",
                     "# Glossary",
                     "## Term",
                     "<!-- taco:pack=glossary.terms -->",
@@ -40,6 +89,14 @@ def _state(tmp_path: Path) -> RepoState:
             "docs/dev/principles.md",
             "\n".join(
                 [
+                    "---",
+                    "id: GOV-CODE-PRINCIPLES",
+                    "type: governance",
+                    "title: Principles",
+                    "status: active",
+                    "links: []",
+                    "---",
+                    "",
                     "# Principles",
                     "## Rules",
                     "<!-- taco:pack=principles.snippets -->",
@@ -52,6 +109,23 @@ def _state(tmp_path: Path) -> RepoState:
             "docs/dev/tasks/T-005-mcp-tools.md",
             "\n".join(
                 [
+                    "---",
+                    "id: T-005",
+                    "type: task",
+                    "title: T-005-mcp-tools",
+                    "status: active",
+                    "plan_ref: PLAN-MAIN",
+                    "scope:",
+                    "  in: []",
+                    "  out: []",
+                    "references:",
+                    "  modules: [ARCH-INDEX]",
+                    "  flows: [PLAN-MAIN]",
+                    "  schemas: [GOV-CODE-PRINCIPLES]",
+                    "  governance: [GOV-CODE-PRINCIPLES]",
+                    "links: [PLAN-MAIN]",
+                    "---",
+                    "",
                     "# Task: T-005-mcp-tools",
                     "## Intent",
                     "<!-- taco:pack=task.core -->",
@@ -179,6 +253,97 @@ def test_task_record_dry_run_preview(tmp_path: Path) -> None:
     assert result["ok"] is True
     assert result["data"]["applied"] is False
     assert result["data"]["preview"] == "- validated behavior"
+
+
+def test_task_pack_fails_when_readiness_requirements_missing(tmp_path: Path) -> None:
+    (tmp_path / "docs" / "dev" / "tasks").mkdir(parents=True)
+    (tmp_path / "docs" / "dev").mkdir(exist_ok=True)
+    (tmp_path / "docs" / "intent.md").write_text("# Intent\n", encoding="utf-8")
+    (tmp_path / "docs" / "architecture.md").write_text(
+        "# Architecture\n", encoding="utf-8"
+    )
+    (tmp_path / "docs" / "plan.md").write_text("# Plan\n", encoding="utf-8")
+    (tmp_path / "docs" / "glossary.md").write_text("# Glossary\n", encoding="utf-8")
+    (tmp_path / "docs" / "dev" / "principles.md").write_text(
+        "# Principles\n", encoding="utf-8"
+    )
+    (tmp_path / "docs" / "dev" / "todo.md").write_text("# Todo\n", encoding="utf-8")
+    (tmp_path / "docs" / "dev" / "tasks" / "T-099-not-ready.md").write_text(
+        "\n".join(
+            [
+                "---",
+                "id: T-099",
+                "type: task",
+                "title: T-099-not-ready",
+                "status: todo",
+                "plan_ref: PLAN-MAIN",
+                "scope:",
+                "  in: []",
+                "references:",
+                "  modules: []",
+                "  flows: []",
+                "  schemas: []",
+                "---",
+                "",
+                "# Task: T-099-not-ready",
+                "## Intent",
+                "intent",
+                "## Goal",
+                "goal",
+                "## Scope",
+                "scope",
+                "## Implementation Approach",
+                "plan",
+                "## Verification Approach",
+                "Pending definition.",
+                "## Implementation Result",
+                "Pending",
+                "## Verification Result",
+                "Pending",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    config = {
+        "docs": {
+            "intent": "docs/intent.md",
+            "architecture": "docs/architecture.md",
+            "plan": "docs/plan.md",
+            "glossary": "docs/glossary.md",
+            "principles": ["docs/dev/principles.md"],
+            "todo": ["docs/dev/todo.md"],
+            "tasks_glob": "docs/dev/tasks/T-*.md",
+        },
+        "budget": {
+            "default_tokens": 50,
+            "priority_order": [
+                "task.core",
+                "task.plans",
+                "arch.snippets",
+                "principles.snippets",
+                "glossary.terms",
+            ],
+            "required_groups": [
+                "task.core",
+                "task.plans",
+                "pack.next_actions",
+                "pack.acceptance_checks",
+                "pack.verification_commands",
+            ],
+        },
+        "modules": {"git": {"path": "docs/dev/git.md"}},
+    }
+    (tmp_path / "taco.yaml").write_text(yaml.safe_dump(config), encoding="utf-8")
+
+    state = load_repo_state(tmp_path)
+    packed = call_tool(state, "task.pack", {"task_id": "T-099"})
+    assert packed["ok"] is False
+    assert packed["error"]["code"] == "task_not_ready"
+    missing = packed["error"]["details"]["missing_requirements"]
+    assert "scope.out" in missing
+    assert "references.modules" in missing
+    assert "verification.criteria" in missing
 
 
 def test_load_repo_state_from_config(tmp_path: Path) -> None:
