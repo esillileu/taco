@@ -2,7 +2,7 @@
 id: T-011
 type: task
 title: T-011-feature-precision
-status: todo
+status: active
 plan_ref: PLAN-MAIN
 priority: p1
 estimate: m
@@ -71,8 +71,8 @@ links: [PLAN-MAIN]
 ## Implementation Result
 
 - Pending (do not fill until the task is completed)
-
 - Updated Phase 5 from placeholders to executable tasks (T-012~T-014) and linked mode-transition flow into plan/architecture/overview
+
 ## Verification Result
 
 - Pending (do not fill until the task is completed)
