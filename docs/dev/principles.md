@@ -10,16 +10,16 @@
 - [Plan](../plan.md) - phase baseline
 
 ## Principles
-<!-- taco:pack=principles.snippets -->
 
 - Use MCP-first workflow over direct document exploration when operating as an agent.
 - Keep planning deterministic and traceable to SSOT documents.
 - Keep each task focused on one scope unit.
 - Record decisions, assumptions, and unresolved points in task scope/approach sections.
 - Record implementation and verification outcomes only after task completion.
+- Keep architecture/plan documents global and stable; do not reshape SSOT by task.
+- Resolve task context through declared references, not broad whole-document loading.
 
 ## Design and Implementation Principles
-<!-- taco:pack=principles.snippets -->
 
 - Python-first delivery, Rust-final architecture:
   - Deliver the first usable version in Python.
@@ -42,6 +42,9 @@
 - Rules in configuration:
   - Keep policy and selection rules (`headings`, `priority`, paths, budgets) in config (`taco.yaml`) instead of hardcoding.
   - Keep code generic; change behavior through config updates.
+- Reference-addressable documentation:
+  - Assign stable reference ids to retrievable sections in SSOT and operational docs.
+  - Task docs must declare required references explicitly so pack assembly is deterministic.
 - Simple data types:
   - Prefer plain records/lists/maps over deep inheritance or framework-specific types.
   - Avoid Python-only magic patterns that complicate Rust parity.

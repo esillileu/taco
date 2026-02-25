@@ -9,11 +9,12 @@
 - [Plan](./plan.md) - 단계 맥락
 
 ## Terms
-<!-- taco:pack=glossary.terms -->
 
 - `TACO`: Task Context Orchestrator
 - `Task`: 단일 작업 단위 실행/추적 문서
 - `Context Pack`: task 수행에 필요한 최소 정보 묶음
+- `Reference ID`: 문서 섹션을 안정적으로 지칭하기 위한 식별자 (`taco:ref`)
+- `Context Requirement`: task가 실행 전에 반드시 요구하는 참조 식별자 목록
 - `Write Target`: 완료/갱신 기록의 정확한 파일/섹션 위치
 - `Deterministic Extraction`: heading/anchor 기반 고정 추출 방식
 - `SSOT`: Single Source of Truth

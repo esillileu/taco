@@ -53,14 +53,24 @@
 - Keep CLI command shape aligned with MCP naming: `taco <domain> <action> [options]`.
 - Use `uv` for Python dependency and command execution (`uv run --extra dev ...`).
 - Local `ruff`/`mypy` binaries may be used for faster feedback, but reproducible checks should still pass via `uv`.
+- Keep SSOT docs global; do not duplicate architecture/plan content into task-local variants.
+
+## Reference ID Contract
+
+- Use stable comment markers for retrievable sections:
+  - `<!-- taco:ref=<ID> -->`
+- `ID` must be unique within the repository.
+- Prefer semantic naming over positional numbering.
+- Keep reference IDs stable across heading moves and document reordering.
 
 ## Task File Contract
 
-Every file in `docs/dev/tasks/` must include:
+Every new or updated file in `docs/dev/tasks/` must include:
 
 - `Intent`
 - `Goal`
 - `Scope`
+- `Context Requirements`
 - `Implementation Approach`
 - `Verification Approach`
 - `Implementation Result`
