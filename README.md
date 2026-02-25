@@ -24,6 +24,11 @@ TACO (Task Context Orchestrator) is a local MCP server that builds deterministic
 - Constraint: keep MCP/CLI contracts stable across both runtimes.
 - Dogfooding: use `taco` on this repository as soon as each tool becomes available.
 
+## Python Tooling
+
+- Use `uv` as the standard Python package and command manager.
+- Run project checks via `make` (which delegates to `uv`) or directly with `uv run --extra dev ...`.
+
 ## Documentation Structure
 
 ### SSOT (Human-facing)

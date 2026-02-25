@@ -51,6 +51,7 @@
 - Keep `Implementation Result` and `Verification Result` pending until completion.
 - Use canonical tool naming: singular domain + concise action (`task.pack`, `doc.snippet`).
 - Keep CLI command shape aligned with MCP naming: `taco <domain> <action> [options]`.
+- Use `uv` for Python dependency and command execution (`uv run --extra dev ...`).
 
 ## Task File Contract
 

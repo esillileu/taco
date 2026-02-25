@@ -3,13 +3,13 @@
 check: validate-docs
 
 format:
-	ruff format .
+	uv run --extra dev ruff format .
 
 lint:
-	ruff check .
+	uv run --extra dev ruff check .
 
 test:
-	pytest
+	uv run --extra dev pytest
 
 validate-docs:
-	python3 scripts/validate_docs.py
+	uv run --extra dev python scripts/validate_docs.py
