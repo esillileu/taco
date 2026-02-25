@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from posixpath import dirname, relpath
 from typing import Any
 
 import yaml
@@ -200,7 +201,10 @@ def _task_complete(state: RepoState, args: dict[str, Any]) -> dict[str, Any]:
     plan_file = state.root / plan_path
     plan_text = plan_file.read_text(encoding="utf-8")
     updated_plan, promoted = _advance_plan_for_completed_task(
-        plan_text, completed_task_id=task_id, task_index=state.index.task_index
+        plan_text,
+        completed_task_id=task_id,
+        task_index=state.index.task_index,
+        plan_path=plan_path,
     )
 
     if dry_run:
@@ -463,6 +467,7 @@ def _advance_plan_for_completed_task(
     plan_text: str,
     completed_task_id: str,
     task_index: dict[str, str],
+    plan_path: str,
 ) -> tuple[str, str | None]:
     meta, body = _split_front_matter(plan_text)
     if not meta:
@@ -496,7 +501,81 @@ def _advance_plan_for_completed_task(
 
     meta["active_tasks"] = active_clean
     meta["next_tasks"] = remaining_next
-    return _compose_front_matter(meta, body), promoted
+    next_body = _sync_plan_task_sections(
+        body=body,
+        plan_path=plan_path,
+        task_index=task_index,
+        active_tasks=active_clean,
+        next_tasks=remaining_next,
+    )
+    return _compose_front_matter(meta, next_body), promoted
+
+
+def _sync_plan_task_sections(
+    body: str,
+    plan_path: str,
+    task_index: dict[str, str],
+    active_tasks: list[str],
+    next_tasks: list[str],
+) -> str:
+    lines = body.splitlines()
+    lines = _replace_plan_task_section(
+        lines,
+        section_heading="Active Tasks",
+        entries=_format_plan_task_entries(active_tasks, plan_path, task_index),
+    )
+    lines = _replace_plan_task_section(
+        lines,
+        section_heading="Next Tasks",
+        entries=_format_plan_task_entries(next_tasks, plan_path, task_index),
+    )
+    return "\n".join(lines).rstrip()
+
+
+def _replace_plan_task_section(
+    lines: list[str], section_heading: str, entries: list[str]
+) -> list[str]:
+    marker = f"## {section_heading}"
+    heading_idx = -1
+    for idx, line in enumerate(lines):
+        if line.strip() == marker:
+            heading_idx = idx
+            break
+    if heading_idx < 0:
+        return lines
+
+    start = heading_idx + 1
+    end = len(lines)
+    for idx in range(start, len(lines)):
+        if lines[idx].startswith("## "):
+            end = idx
+            break
+
+    replacement: list[str] = [""]
+    replacement.extend(entries)
+    replacement.append("")
+    return lines[:start] + replacement + lines[end:]
+
+
+def _format_plan_task_entries(
+    task_ids: list[str], plan_path: str, task_index: dict[str, str]
+) -> list[str]:
+    return [
+        _format_plan_task_entry(task_id, plan_path=plan_path, task_index=task_index)
+        for task_id in task_ids
+    ]
+
+
+def _format_plan_task_entry(
+    task_id: str, plan_path: str, task_index: dict[str, str]
+) -> str:
+    task_path = task_index.get(task_id)
+    if not task_path:
+        return f"- `{task_id}`"
+    relative = relpath(task_path, start=dirname(plan_path))
+    if not relative.startswith("."):
+        relative = f"./{relative}"
+    return f"- [{task_id}]({relative})"
 
 
 def _preview_change(before: str, after: str) -> str:
