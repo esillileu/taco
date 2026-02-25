@@ -78,6 +78,12 @@ links:
 - Require build-to-plan fallback on boundary/scope/verification ambiguity.
 - Keep mode transition policy consistent with architecture flow docs.
 
+### Phase 5 Task Breakdown
+
+- `T-012`: Plan->Build readiness gate enforcement
+- `T-013`: Build->Plan fallback state and blocked sync
+- `T-014`: Planner tool surface (view/locator/validator)
+
 ## Phase 6: CLI Ergonomics and Human Workflow
 
 - Add human-readable context output mode for CLI.
@@ -113,9 +119,9 @@ links:
 
 ## Next Tasks
 
-- [T-012](./tasks/T-012-placeholder.md)
-- [T-013](./tasks/T-013-placeholder.md)
-- [T-014](./tasks/T-014-placeholder.md)
+- [T-012](./tasks/T-012-plan-build-readiness-gate.md)
+- [T-013](./tasks/T-013-build-plan-fallback-state.md)
+- [T-014](./tasks/T-014-planner-view-locator-validator.md)
 - [T-015](./tasks/T-015-cli-human-context-view.md)
 - [T-000](./tasks/T-000-bootstrap.md)
 - [T-001](./tasks/T-001-parser-foundation.md)
