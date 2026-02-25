@@ -18,6 +18,7 @@ flows:
   - FLOW-TASK-PACK
   - FLOW-TOOL-DISPATCH
   - FLOW-TASK-RECORD
+  - FLOW-MODE-TRANSITION
 schemas:
   - SCH-PACK-RESULT
   - SCH-WRITE-TARGET
@@ -42,6 +43,7 @@ links:
   - FLOW-TASK-PACK
   - FLOW-TOOL-DISPATCH
   - FLOW-TASK-RECORD
+  - FLOW-MODE-TRANSITION
   - SCH-PACK-RESULT
   - SCH-SECTION-SLICE
   - SCH-INDEX-GRAPH
@@ -82,6 +84,12 @@ Architecture anchor for modules, flows, and schemas. This document is global SSO
 5. Tool dispatch (`tools.py`): route to task/doc/issue/convention handlers.
 6. Pack/Router (`pack.py`, `router.py`): build bundle or write target.
 7. Envelope emit (`main.py`): return JSON response envelope.
+
+## Operating Modes
+
+- Plan mode: update architecture/plan/task nodes with validation and impact awareness.
+- Build mode: execute exactly one task using `task.pack` output and record results.
+- Mode switches follow `FLOW-MODE-TRANSITION` and must be explicit.
 
 ## Interface Surface
 
@@ -134,6 +142,7 @@ Architecture anchor for modules, flows, and schemas. This document is global SSO
 - Oversized pack payload when heading slices are too broad.
 - Drift between schema docs and actual response shape.
 - Confusion between node-id references and heading marker references.
+- Mode drift where plan-level decisions leak into build execution without task updates.
 
 ## Dogfooding Rule
 
