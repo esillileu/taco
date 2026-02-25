@@ -4,12 +4,13 @@ type: plan
 title: Execution Plan
 status: active
 phase: phase-feature-precision
-focus: Close feature gaps while enforcing plan/build mode separation and deterministic closeout
+focus: Close feature gaps while enforcing plan/build mode separation and deterministic
+  closeout
 active_tasks:
 - T-011
+- T-012
 blocked_tasks: []
 next_tasks:
-- T-012
 - T-013
 - T-014
 - T-015
@@ -122,20 +123,11 @@ links:
 ## Active Tasks
 
 - [T-011](./tasks/T-011-feature-precision.md)
+- [T-012](./tasks/T-012-plan-build-readiness-gate.md)
 
 ## Next Tasks
 
-- [T-012](./tasks/T-012-plan-build-readiness-gate.md)
 - [T-013](./tasks/T-013-build-plan-fallback-state.md)
 - [T-014](./tasks/T-014-planner-view-locator-validator.md)
 - [T-015](./tasks/T-015-init-context-bootstrap.md)
 - [T-016](./tasks/T-016-cli-human-context-view.md)
-- [T-000](./tasks/T-000-bootstrap.md)
-- [T-001](./tasks/T-001-parser-foundation.md)
-- [T-002](./tasks/T-002-indexer-foundation.md)
-- [T-003](./tasks/T-003-pack-budget.md)
-- [T-004](./tasks/T-004-write-target-router.md)
-- [T-005](./tasks/T-005-mcp-tools.md)
-- [T-006](./tasks/T-006-integration-tests.md)
-- [T-007](./tasks/T-007-pre-implementation-readiness.md)
-- [T-008](./tasks/T-008-cli-entrypoint.md)
