@@ -57,6 +57,13 @@ def test_dogfooding_policy_is_explicitly_documented() -> None:
     assert "dogfooding" in principles.lower()
 
 
+def test_agents_loader_first_names_are_current() -> None:
+    agents = _read("AGENTS.md")
+    assert "`task.pack`" in agents
+    assert "`task.targets`" in agents
+    assert "`doc.snippet`" in agents
+
+
 def _task_slug(task_id: int) -> str:
     slugs = {
         1: "parser-foundation",

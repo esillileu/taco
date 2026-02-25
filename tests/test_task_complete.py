@@ -146,6 +146,14 @@ def _write_context_repo(root: Path) -> None:
                 "",
                 "# Plan",
                 "",
+                "## Active Tasks",
+                "",
+                "- [T-010](./tasks/T-010-task-closeout-automation.md)",
+                "",
+                "## Next Tasks",
+                "",
+                "- [T-011](./tasks/T-011-feature-precision.md)",
+                "",
             ]
         ),
     )
@@ -319,6 +327,10 @@ def test_task_complete_dry_run_preview_and_apply(tmp_path: Path) -> None:
     assert "active_tasks:" in plan_text
     assert "- T-011" in plan_text
     assert "- T-010" not in plan_text.split("next_tasks:", 1)[1]
+    assert "## Active Tasks" in plan_text
+    assert "## Next Tasks" in plan_text
+    assert "- [T-011](./tasks/T-011-feature-precision.md)" in plan_text
+    assert "- [T-010](./tasks/T-010-task-closeout-automation.md)" not in plan_text
 
 
 def test_task_complete_rejects_already_done_task(tmp_path: Path) -> None:

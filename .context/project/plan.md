@@ -3,8 +3,8 @@ id: PLAN-MAIN
 type: plan
 title: Execution Plan
 status: active
-phase: phase-architecture-alignment
-focus: Align architecture docs with current code and finalize front matter-based execution
+phase: phase-feature-precision
+focus: Close feature gaps while enforcing plan/build mode separation and deterministic closeout
 active_tasks:
 - T-011
 blocked_tasks: []
@@ -18,9 +18,11 @@ milestones:
 - M2-architecture-alignment
 - M3-feature-precision
 - M4-cli-ergonomics
+- M5-mode-transition-contract
 links:
 - ARCH-INDEX
 - PROJ-OVERVIEW
+- FLOW-MODE-TRANSITION
 ---
 
 # Plan
@@ -69,13 +71,26 @@ links:
 - Add deterministic behavior checks for each tool path.
 - Keep one-call pack readiness and end-to-end task completion viability.
 
-## Phase 5: CLI Ergonomics and Human Workflow
+## Phase 5: Mode Separation and Transition Safety
+
+- Keep plan mode and build mode responsibilities explicitly separated.
+- Require explicit transition checks before entering build mode.
+- Require build-to-plan fallback on boundary/scope/verification ambiguity.
+- Keep mode transition policy consistent with architecture flow docs.
+
+### Phase 5 Task Breakdown
+
+- `T-012`: Plan->Build readiness gate enforcement
+- `T-013`: Build->Plan fallback state and blocked sync
+- `T-014`: Planner tool surface (view/locator/validator)
+
+## Phase 6: CLI Ergonomics and Human Workflow
 
 - Add human-readable context output mode for CLI.
 - Keep machine envelope as default.
 - Ensure parity between CLI behavior and MCP contract.
 
-## Phase 6: Rust Migration Readiness
+## Phase 7: Rust Migration Readiness
 
 - Freeze DTO/error envelope contracts at tool boundary.
 - Ensure core logic remains language-portable and side-effect bounded.
@@ -84,10 +99,12 @@ links:
 ## Operational Loop
 
 1. Select active task from plan.
-2. Call `task.pack`.
-3. Implement and verify against task verification criteria.
-4. Call `task.targets` / `task.record` to record outcomes.
-5. Update plan status and next tasks.
+2. Validate plan->build readiness for selected task.
+3. Call `task.pack`.
+4. Implement and verify against task verification criteria.
+5. Call `task.targets` / `task.record` (or `task.complete`) to record outcomes.
+6. If boundary or scope changes are required, switch back to plan mode.
+7. Update plan status and next tasks.
 
 ## Exit Criteria
 
@@ -98,14 +115,13 @@ links:
 
 ## Active Tasks
 
-- [T-010](./tasks/T-010-task-closeout-automation.md)
+- [T-011](./tasks/T-011-feature-precision.md)
 
 ## Next Tasks
 
-- [T-011](./tasks/T-011-feature-precision.md)
-- [T-012](./tasks/T-012-placeholder.md)
-- [T-013](./tasks/T-013-placeholder.md)
-- [T-014](./tasks/T-014-placeholder.md)
+- [T-012](./tasks/T-012-plan-build-readiness-gate.md)
+- [T-013](./tasks/T-013-build-plan-fallback-state.md)
+- [T-014](./tasks/T-014-planner-view-locator-validator.md)
 - [T-015](./tasks/T-015-cli-human-context-view.md)
 - [T-000](./tasks/T-000-bootstrap.md)
 - [T-001](./tasks/T-001-parser-foundation.md)

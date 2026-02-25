@@ -3,7 +3,7 @@ id: PROJ-OVERVIEW
 type: anchor
 title: Project Overview
 status: active
-links: [ARCH-INDEX, PLAN-MAIN, FLOW-TASK-PACK]
+links: [ARCH-INDEX, PLAN-MAIN, FLOW-TASK-PACK, FLOW-MODE-TRANSITION]
 ---
 
 # Project Overview
@@ -30,6 +30,16 @@ TACO orchestrates task-first execution by delivering one executable task with on
 - Unit of execution is exactly one task node.
 - Task node must include execution intent, scope boundary, references, and verification criteria.
 - Pack builder resolves references to architecture/governance nodes and extracts heading slices.
+
+## Mode Model
+
+- Plan mode:
+  - updates architecture/plan/task documents
+  - validates references and transition readiness
+- Build mode:
+  - executes one task with bundle-only context
+  - records implementation/verification outcomes
+- Mode switching policy is defined in `FLOW-MODE-TRANSITION`.
 
 ## Quality Bar
 
