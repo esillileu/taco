@@ -98,7 +98,7 @@ links:
 
 ## Active Tasks
 
-- [T-010](./tasks/T-010-placeholder.md)
+- [T-010](./tasks/T-010-pack-precision.md)
 
 ## Next Tasks
 
