@@ -47,8 +47,35 @@
 
 ## Implementation Result
 
-- Pending (do not fill until the task is completed)
+- Added pack assembly module at `src/taco/pack.py`.
+- Implemented budget policy DTO and parsing:
+  - `BudgetConfig(default_tokens, priority_order)`
+  - `BudgetConfig.from_dict()` for config-driven budget settings
+- Implemented deterministic task pack builder:
+  - `build_task_pack(task_id, index, budget, token_estimator)`
+  - strict ordering by priority group, path, and heading line
+  - stable include/drop decision based on fixed budget
+- Implemented pack result DTOs with audit metadata:
+  - `PackResult`, `PackSnippet`, `DroppedSnippet`
+  - inclusion reason and dropped reason (`budget_exceeded`) tracking
+- Implemented standardized error model:
+  - `PackError(code, message, details)`
+  - errors for missing task id, missing task doc, missing document text, invalid config
+- Extended index graph for pack assembly input:
+  - added `document_texts` to `IndexGraph` in `src/taco/indexer.py`
+- Kept token estimator pluggable to support later Rust parity.
 
 ## Verification Result
 
-- Pending (do not fill until the task is completed)
+- Added pack behavior tests in `tests/test_pack.py` covering:
+  - valid task pack construction
+  - missing task id failure
+  - budget boundary behavior (low/equal/high)
+  - deterministic/stable ordering
+  - golden output shape contract (`to_dict()`)
+- Existing parser/indexer tests continue to pass after `IndexGraph` extension.
+- Verification commands:
+  - `uv run --extra dev ruff check .` -> pass
+  - `uv run --extra dev mypy .` -> pass
+  - `uv run --extra dev pytest -q` -> pass
+  - `uv run --extra dev python scripts/validate_docs.py` -> pass
