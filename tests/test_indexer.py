@@ -137,4 +137,70 @@ def test_index_document_contract_to_dict() -> None:
     graph = build_index(docs, config)
     payload = graph.documents[0].to_dict()
 
-    assert set(payload.keys()) == {"path", "doc_type", "task_id", "headings", "links"}
+    assert set(payload.keys()) == {
+        "path",
+        "doc_type",
+        "task_id",
+        "node_id",
+        "node_type",
+        "headings",
+        "links",
+    }
+
+
+def test_build_index_collects_reference_lookup() -> None:
+    config = _base_config()
+    docs = [
+        DocumentInput.from_text("docs/intent.md", "# Intent\n"),
+        DocumentInput.from_text(
+            "docs/architecture.md",
+            "\n".join(
+                [
+                    "# Architecture",
+                    "## Boundary",
+                    "<!-- taco:ref=ARCH-BOUNDARY-001 -->",
+                    "detail",
+                ]
+            ),
+        ),
+        DocumentInput.from_text("docs/plan.md", "# Plan\n"),
+        DocumentInput.from_text("docs/glossary.md", "# Glossary\n"),
+    ]
+    graph = build_index(docs, config)
+    assert (
+        graph.reference_lookup["ARCH-BOUNDARY-001"]
+        == "docs/architecture.md#boundary"
+    )
+
+
+def test_build_index_rejects_duplicate_reference_ids() -> None:
+    config = _base_config()
+    docs = [
+        DocumentInput.from_text("docs/intent.md", "# Intent\n"),
+        DocumentInput.from_text(
+            "docs/architecture.md",
+            "\n".join(
+                [
+                    "# Architecture",
+                    "## Boundary",
+                    "<!-- taco:ref=REF-DUP-001 -->",
+                    "detail",
+                ]
+            ),
+        ),
+        DocumentInput.from_text(
+            "docs/plan.md",
+            "\n".join(
+                [
+                    "# Plan",
+                    "## Phase",
+                    "<!-- taco:ref=REF-DUP-001 -->",
+                    "detail",
+                ]
+            ),
+        ),
+        DocumentInput.from_text("docs/glossary.md", "# Glossary\n"),
+    ]
+    with pytest.raises(IndexerError) as exc:
+        build_index(docs, config)
+    assert exc.value.code == "duplicate_reference_id"

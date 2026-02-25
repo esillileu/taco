@@ -2,14 +2,14 @@ repo:
   root: "."
 
 docs:
-  intent: "docs/intent.md"
-  architecture: "docs/architecture.md"
-  principles: ["docs/dev/principles.md"]
-  plan: "docs/plan.md"
-  doc_map: "docs/dev/docs.md"
-  glossary: "docs/glossary.md"
-  todo: ["docs/dev/todo.md"]
-  tasks_glob: "docs/dev/tasks/T-*.md"
+  intent: ".context/project/overview.md"
+  architecture: ".context/project/architecture/index.md"
+  principles: [".context/governance/code-principles.md"]
+  plan: ".context/project/plan.md"
+  doc_map: ".context/governance/doc/index.md"
+  glossary: ".context/project/architecture/schemas/glossary.md"
+  todo: [".context/project/plan.md"]
+  tasks_glob: ".context/project/tasks/T-*.md"
 
 parsing:
   task_required_headings:
@@ -31,10 +31,16 @@ budget:
     - "principles.snippets"
     - "glossary.terms"
 
+pack:
+  common_required_refs:
+    - "ARCH-INDEX"
+    - "PLAN-MAIN"
+    - "GOV-CODE-PRINCIPLES"
+
 modules:
   git:
     enabled: true
-    path: "docs/dev/git.md"
+    path: ".context/governance/git/index.md"
 
 runtime:
   strategy: "python-first-rust-final"

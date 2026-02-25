@@ -15,12 +15,16 @@ class RouterConfig:
         return cls(
             heading_map={
                 "implementation_result": "Implementation Result",
+                "implementation": "Implementation Result",
                 "verification_result": "Verification Result",
+                "verification": "Verification Result",
                 "issue_record": "Verification Result",
             },
             mode_map={
                 "implementation_result": "append_implementation",
+                "implementation": "append_implementation",
                 "verification_result": "append_verification",
+                "verification": "append_verification",
                 "issue_record": "append_issue",
             },
         )

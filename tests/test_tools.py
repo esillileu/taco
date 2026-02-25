@@ -15,16 +15,37 @@ def _state(tmp_path: Path) -> RepoState:
         DocumentInput.from_text("docs/intent.md", "# Intent\n"),
         DocumentInput.from_text(
             "docs/architecture.md",
-            "\n".join(["# Architecture", "## System", "system detail"]),
+            "\n".join(
+                [
+                    "# Architecture",
+                    "## System",
+                    "<!-- taco:pack=arch.snippets -->",
+                    "system detail",
+                ]
+            ),
         ),
         DocumentInput.from_text("docs/plan.md", "# Plan\n"),
         DocumentInput.from_text(
             "docs/glossary.md",
-            "\n".join(["# Glossary", "## Term", "term detail"]),
+            "\n".join(
+                [
+                    "# Glossary",
+                    "## Term",
+                    "<!-- taco:pack=glossary.terms -->",
+                    "term detail",
+                ]
+            ),
         ),
         DocumentInput.from_text(
             "docs/dev/principles.md",
-            "\n".join(["# Principles", "## Rules", "rules detail"]),
+            "\n".join(
+                [
+                    "# Principles",
+                    "## Rules",
+                    "<!-- taco:pack=principles.snippets -->",
+                    "rules detail",
+                ]
+            ),
         ),
         DocumentInput.from_text("docs/dev/todo.md", "# Todo\n"),
         DocumentInput.from_text(
@@ -33,14 +54,24 @@ def _state(tmp_path: Path) -> RepoState:
                 [
                     "# Task: T-005-mcp-tools",
                     "## Intent",
+                    "<!-- taco:pack=task.core -->",
                     "intent detail",
                     "## Goal",
+                    "<!-- taco:pack=task.core -->",
                     "goal detail",
                     "## Scope",
+                    "<!-- taco:pack=task.core,pack.next_actions -->",
+                    "- prepare tool map",
                     "scope detail",
                     "## Implementation Approach",
+                    "<!-- taco:pack=task.plans,pack.next_actions -->",
+                    "1. implement dispatcher",
                     "impl detail",
                     "## Verification Approach",
+                    "<!-- taco:pack=task.plans,pack.acceptance_checks,"
+                    "pack.verification_commands -->",
+                    "- assert tool envelope",
+                    "- uv run --extra dev pytest -q",
                     "verify detail",
                     "## Implementation Result",
                     "Pending",
@@ -75,8 +106,16 @@ def _state(tmp_path: Path) -> RepoState:
                 "principles.snippets",
                 "glossary.terms",
             ),
+            required_groups=(
+                "task.core",
+                "task.plans",
+                "pack.next_actions",
+                "pack.acceptance_checks",
+                "pack.verification_commands",
+            ),
         ),
         router_config=RouterConfig.default(),
+        common_required_refs=(),
     )
 
 
@@ -177,6 +216,13 @@ def test_load_repo_state_from_config(tmp_path: Path) -> None:
                 "arch.snippets",
                 "principles.snippets",
                 "glossary.terms",
+            ],
+            "required_groups": [
+                "task.core",
+                "task.plans",
+                "pack.next_actions",
+                "pack.acceptance_checks",
+                "pack.verification_commands",
             ],
         },
         "modules": {"git": {"path": "docs/dev/git.md"}},

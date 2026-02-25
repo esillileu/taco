@@ -6,6 +6,8 @@ from dataclasses import asdict, dataclass
 
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.*)$")
 EXPLICIT_ANCHOR_RE = re.compile(r"^(.*?)\s*\{#([A-Za-z0-9_-]+)\}\s*$")
+PACK_TAG_RE = re.compile(r"^\s*<!--\s*taco:pack=([a-zA-Z0-9_,.\-]+)\s*-->\s*$")
+REF_TAG_RE = re.compile(r"^\s*<!--\s*taco:ref=([A-Za-z0-9._:\-]+)\s*-->\s*$")
 
 
 @dataclass(frozen=True)
@@ -14,6 +16,8 @@ class SectionSlice:
     level: int
     heading: str
     anchor_id: str
+    pack_groups: tuple[str, ...]
+    ref_ids: tuple[str, ...]
     start_line: int
     end_line: int
 
@@ -42,7 +46,7 @@ def parse_markdown_sections(
     lines = markdown_text.splitlines()
     anchors_seen: dict[str, int] = {}
 
-    rows: list[tuple[int, int, str, str]] = []
+    rows: list[tuple[int, int, str, str, tuple[str, ...], tuple[str, ...]]] = []
     for idx, raw_line in enumerate(lines, start=1):
         match = HEADING_RE.match(raw_line)
         if not match:
@@ -65,10 +69,14 @@ def parse_markdown_sections(
             prefer_anchors=active_config.prefer_anchors,
         )
         anchor_id = _dedupe_anchor(base_anchor, anchors_seen)
-        rows.append((idx, level, heading_text, anchor_id))
+        pack_groups = _extract_pack_groups(lines, idx)
+        ref_ids = _extract_ref_ids(lines, idx)
+        rows.append((idx, level, heading_text, anchor_id, pack_groups, ref_ids))
 
     sections: list[SectionSlice] = []
-    for pos, (start_line, level, heading, anchor_id) in enumerate(rows):
+    for pos, (start_line, level, heading, anchor_id, pack_groups, ref_ids) in enumerate(
+        rows
+    ):
         next_start = rows[pos + 1][0] if pos + 1 < len(rows) else len(lines) + 1
         sections.append(
             SectionSlice(
@@ -76,6 +84,8 @@ def parse_markdown_sections(
                 level=level,
                 heading=heading,
                 anchor_id=anchor_id,
+                pack_groups=pack_groups,
+                ref_ids=ref_ids,
                 start_line=start_line,
                 end_line=next_start - 1,
             )
@@ -115,3 +125,45 @@ def _dedupe_anchor(base_anchor: str, anchors_seen: dict[str, int]) -> str:
     if current == 1:
         return base_anchor
     return f"{base_anchor}-{current}"
+
+
+def _extract_pack_groups(lines: list[str], heading_line_number: int) -> tuple[str, ...]:
+    groups: list[str] = []
+    for candidate in _marker_block_lines(lines, heading_line_number):
+        match = PACK_TAG_RE.match(candidate)
+        if not match:
+            continue
+        raw_groups = [item.strip() for item in match.group(1).split(",")]
+        for group in raw_groups:
+            if group and group not in groups:
+                groups.append(group)
+    return tuple(groups)
+
+
+def _extract_ref_ids(lines: list[str], heading_line_number: int) -> tuple[str, ...]:
+    ref_ids: list[str] = []
+    for candidate in _marker_block_lines(lines, heading_line_number):
+        match = REF_TAG_RE.match(candidate)
+        if not match:
+            continue
+        ref_id = match.group(1).strip()
+        if ref_id and ref_id not in ref_ids:
+            ref_ids.append(ref_id)
+    return tuple(ref_ids)
+
+
+def _marker_block_lines(lines: list[str], heading_line_number: int) -> tuple[str, ...]:
+    markers: list[str] = []
+    i = heading_line_number
+    while i < len(lines):
+        candidate = lines[i]
+        stripped = candidate.strip()
+        if not stripped:
+            i += 1
+            continue
+        if stripped.startswith("<!--") and stripped.endswith("-->"):
+            markers.append(candidate)
+            i += 1
+            continue
+        break
+    return tuple(markers)
