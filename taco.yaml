@@ -1,0 +1,45 @@
+repo:
+  root: "."
+
+docs:
+  intent: "docs/intent.md"
+  architecture: "docs/architecture.md"
+  principles: ["docs/dev/principles.md"]
+  plan: "docs/plan.md"
+  doc_map: "docs/dev/docs.md"
+  glossary: "docs/glossary.md"
+  todo: ["docs/dev/todo.md"]
+  tasks_glob: "docs/dev/tasks/T-*.md"
+
+parsing:
+  task_required_headings:
+    - "Intent"
+    - "Goal"
+    - "Scope"
+    - "Implementation Approach"
+    - "Verification Approach"
+    - "Implementation Result"
+    - "Verification Result"
+  prefer_anchors: true
+
+budget:
+  default_tokens: 1800
+  priority_order:
+    - "task.core"
+    - "task.plans"
+    - "arch.snippets"
+    - "principles.snippets"
+    - "glossary.terms"
+
+modules:
+  git:
+    enabled: true
+    path: "docs/dev/git.md"
+
+runtime:
+  strategy: "python-first-rust-final"
+  active: "python"
+  contract_lock: true
+  dogfooding:
+    enabled: true
+    repository_self_apply: true
