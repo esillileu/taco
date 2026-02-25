@@ -50,8 +50,19 @@
 
 ## Implementation Result
 
-- Pending (do not fill until the task is completed)
+- Added readiness-gate test suite at `tests/test_preimplementation_readiness.py`.
+- Encoded acceptance criteria as executable checks:
+  - stale legacy tool names are absent in active docs
+  - active task plans (`T-001`..`T-007`) have no unresolved placeholders
+  - architecture/principles include Python-first and Rust-final strategy
+  - dogfooding policy is explicitly documented
+- Readiness checks now run alongside existing lint/type/test/doc validation workflow.
 
 ## Verification Result
 
-- Pending (do not fill until the task is completed)
+- Verification commands:
+  - `uv run --extra dev ruff check .` -> pass
+  - `uv run --extra dev mypy .` -> pass
+  - `uv run --extra dev pytest -q` -> pass
+  - `uv run --extra dev python scripts/validate_docs.py` -> pass
+- Readiness gate tests passed as part of the same test run.
