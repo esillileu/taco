@@ -68,6 +68,26 @@ def test_resolve_write_target_for_verification_result() -> None:
     assert target.mode == "append_verification"
 
 
+def test_resolve_write_target_accepts_short_aliases() -> None:
+    graph = _build_graph(
+        "\n".join(
+            [
+                "# Task: T-004-write-target-router",
+                "## Implementation Result",
+                "Pending",
+                "## Verification Result",
+                "Pending",
+            ]
+        )
+    )
+    implementation = resolve_write_target("T-004", "implementation", graph)
+    verification = resolve_write_target("T-004", "verification", graph)
+    assert implementation.heading == "Implementation Result"
+    assert verification.heading == "Verification Result"
+    assert implementation.mode == "append_implementation"
+    assert verification.mode == "append_verification"
+
+
 def test_resolve_write_target_missing_heading() -> None:
     graph = _build_graph(
         "\n".join(

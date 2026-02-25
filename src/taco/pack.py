@@ -268,7 +268,10 @@ def _build_candidates(
         if doc.path.startswith("docs/dev/tasks/") and doc.path != task_path:
             continue
         for heading in doc.headings:
-            for group in heading.pack_groups:
+            groups = tuple(heading.pack_groups)
+            if not groups and doc.path == task_path:
+                groups = _infer_task_groups(heading.heading)
+            for group in groups:
                 if group.startswith("task.") and doc.path != task_path:
                     continue
                 candidates.append(
@@ -278,10 +281,26 @@ def _build_candidates(
                         heading=heading,
                         document_texts=index.document_texts,
                         estimator=estimator,
-                        reason="selector_match",
+                        reason=(
+                            "selector_match"
+                            if heading.pack_groups
+                            else "task_heading_fallback"
+                        ),
                     )
                 )
     return candidates
+
+
+def _infer_task_groups(heading: str) -> tuple[str, ...]:
+    if heading in {"Intent", "Goal"}:
+        return ("task.core",)
+    if heading == "Scope":
+        return ("task.core", "pack.next_actions")
+    if heading == "Implementation Approach":
+        return ("task.plans", "pack.next_actions")
+    if heading == "Verification Approach":
+        return ("task.plans", "pack.acceptance_checks", "pack.verification_commands")
+    return ()
 
 
 def _to_candidate(

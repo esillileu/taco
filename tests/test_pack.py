@@ -169,6 +169,46 @@ def test_build_task_pack_fails_when_required_groups_missing() -> None:
     assert exc.value.code == "pack_not_ready"
 
 
+def test_build_task_pack_uses_task_heading_fallback_without_selectors() -> None:
+    docs = [
+        DocumentInput.from_text("docs/intent.md", "# Intent\n"),
+        DocumentInput.from_text("docs/architecture.md", "# Architecture\n"),
+        DocumentInput.from_text("docs/plan.md", "# Plan\n"),
+        DocumentInput.from_text("docs/glossary.md", "# Glossary\n"),
+        DocumentInput.from_text("docs/dev/principles.md", "# Principles\n"),
+        DocumentInput.from_text("docs/dev/todo.md", "# Todo\n"),
+        DocumentInput.from_text(
+            "docs/dev/tasks/T-003-pack-budget.md",
+            "\n".join(
+                [
+                    "# Task: T-003-pack-budget",
+                    "## Intent",
+                    "intent detail",
+                    "## Goal",
+                    "goal detail",
+                    "## Scope",
+                    "- run parser",
+                    "## Implementation Approach",
+                    "1. implement candidate assembly",
+                    "## Verification Approach",
+                    "- verify deterministic output",
+                    "- uv run --extra dev pytest -q",
+                    "## Implementation Result",
+                    "Pending",
+                    "## Verification Result",
+                    "Pending",
+                ]
+            ),
+        ),
+    ]
+    graph = build_index(docs, _index_config())
+    result = build_task_pack("T-003", graph, _budget(default_tokens=200))
+    assert len(result.context_snippets) > 0
+    assert "task_heading_fallback" in {item.reason for item in result.context_snippets}
+    assert len(result.next_actions) > 0
+    assert len(result.verification_commands) > 0
+
+
 def test_build_task_pack_respects_budget_boundaries() -> None:
     graph = _build_graph()
     high_budget = build_task_pack("T-003", graph, _budget(default_tokens=200))
