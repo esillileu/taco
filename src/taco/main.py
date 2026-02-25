@@ -32,6 +32,12 @@ def build_parser() -> argparse.ArgumentParser:
     task_record.add_argument("--content", required=True)
     task_record.add_argument("--apply", action="store_true")
 
+    task_complete = task_sub.add_parser("complete")
+    task_complete.add_argument("--task-id", required=True)
+    task_complete.add_argument("--implementation", required=True)
+    task_complete.add_argument("--verification", required=True)
+    task_complete.add_argument("--apply", action="store_true")
+
     doc_parser = domain_subparsers.add_parser("doc")
     doc_sub = doc_parser.add_subparsers(dest="action", required=True)
     doc_snippet = doc_sub.add_parser("snippet")
@@ -94,6 +100,10 @@ def _to_options(args: argparse.Namespace) -> dict[str, Any]:
         options["route_type"] = args.route_type
     if getattr(args, "content", None) is not None:
         options["content"] = args.content
+    if getattr(args, "implementation", None) is not None:
+        options["implementation"] = args.implementation
+    if getattr(args, "verification", None) is not None:
+        options["verification"] = args.verification
     if getattr(args, "path", None) is not None:
         options["path"] = args.path
     if getattr(args, "anchor_id", None) is not None:
