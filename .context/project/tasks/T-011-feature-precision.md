@@ -72,6 +72,8 @@ links: [PLAN-MAIN]
 
 - Pending (do not fill until the task is completed)
 
+- Updated Phase 5 from placeholders to executable tasks (T-012~T-014) and linked mode-transition flow into plan/architecture/overview
 ## Verification Result
 
 - Pending (do not fill until the task is completed)
+- Dogfooding run succeeded for task.list/task.pack(T-012)/task.targets/doc.snippet/issue.triage/convention.get/task.complete(dry-run)
