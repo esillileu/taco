@@ -98,11 +98,10 @@ links:
 
 ## Active Tasks
 
-- [T-010](./tasks/T-010-task-closeout-automation.md)
+- [T-011](./tasks/T-011-feature-precision.md)
 
 ## Next Tasks
 
-- [T-011](./tasks/T-011-feature-precision.md)
 - [T-012](./tasks/T-012-placeholder.md)
 - [T-013](./tasks/T-013-placeholder.md)
 - [T-014](./tasks/T-014-placeholder.md)
