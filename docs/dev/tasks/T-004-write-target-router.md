@@ -46,8 +46,33 @@
 
 ## Implementation Result
 
-- Pending (do not fill until the task is completed)
+- Added write-target router module at `src/taco/router.py`.
+- Implemented router policy/config DTO:
+  - `RouterConfig` with configurable `heading_map` and `mode_map`
+  - default route policy for:
+    - `implementation_result`
+    - `verification_result`
+    - `issue_record`
+- Implemented deterministic target resolver:
+  - `resolve_write_target(task_id, route_type, index, config)`
+  - returns `WriteTarget(path, heading, line_hint, mode)`
+- Implemented standardized router error model:
+  - `RouterError(code, message, details)`
+  - invalid route type, missing task, missing task doc, missing heading, ambiguous heading
+- Kept core behavior pure and index-driven:
+  - no direct filesystem scan in route resolution
+  - target resolution based on parsed headings in `IndexGraph`.
 
 ## Verification Result
 
-- Pending (do not fill until the task is completed)
+- Added router behavior tests in `tests/test_router.py` covering:
+  - implementation target resolution
+  - verification target resolution
+  - missing target heading failure
+  - ambiguous target heading failure
+  - issue route and output contract shape
+- Verification commands:
+  - `uv run --extra dev ruff check .` -> pass
+  - `uv run --extra dev mypy .` -> pass
+  - `uv run --extra dev pytest -q` -> pass
+  - `uv run --extra dev python scripts/validate_docs.py` -> pass
