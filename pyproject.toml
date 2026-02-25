@@ -11,6 +11,9 @@ requires-python = ">=3.11"
 authors = [{ name = "TACO Contributors" }]
 dependencies = []
 
+[project.scripts]
+taco = "taco.main:main"
+
 [project.optional-dependencies]
 dev = [
   "pytest>=8.0",
