@@ -2,38 +2,54 @@
 id: T-015
 type: task
 title: T-015-init-context-bootstrap
-status: todo
+status: done
 plan_ref: PLAN-MAIN
 priority: p1
 estimate: m
 scope:
   in:
-    - src/taco/main.py
-    - src/taco/cli.py
-    - src/taco/tools.py
-    - scripts/validate_docs.py
-    - tests/test_cli_main.py
-    - tests/test_tools.py
-    - tests/test_integration_mcp_cli.py
+  - src/taco/main.py
+  - src/taco/cli.py
+  - src/taco/tools.py
+  - scripts/validate_docs.py
+  - tests/test_cli_main.py
+  - tests/test_tools.py
+  - tests/test_integration_mcp_cli.py
   out:
-    - 기존 task/doc/pack 동작의 breaking change
-    - 프로젝트별 커스텀 템플릿 생성기
+  - "\uAE30\uC874 task/doc/pack \uB3D9\uC791\uC758 breaking change"
+  - "\uD504\uB85C\uC81D\uD2B8\uBCC4 \uCEE4\uC2A4\uD140 \uD15C\uD50C\uB9BF \uC0DD\uC131\
+    \uAE30"
 references:
-  modules: [MOD-MAIN, MOD-CLI-MAPPER, MOD-TOOLS-DISPATCH]
-  flows: [FLOW-TOOL-DISPATCH, FLOW-MODE-TRANSITION]
-  schemas: [SCH-TOOL-ENVELOPE, SCH-TOOL-ERROR]
-  governance: [GOV-CODE-PRINCIPLES, GOV-DOC-INDEX]
+  modules:
+  - MOD-MAIN
+  - MOD-CLI-MAPPER
+  - MOD-TOOLS-DISPATCH
+  flows:
+  - FLOW-TOOL-DISPATCH
+  - FLOW-MODE-TRANSITION
+  schemas:
+  - SCH-TOOL-ENVELOPE
+  - SCH-TOOL-ERROR
+  governance:
+  - GOV-CODE-PRINCIPLES
+  - GOV-DOC-INDEX
 deliverables:
-  - "`taco init` CLI 엔트리포인트"
-  - "`.context` 기본 디렉토리/문서 템플릿 생성"
-  - front matter 기본값과 작성 가이드 섹션 포함
-  - "init 후 `validate_docs.py` 통과 가능한 최소 상태 보장"
+- "`taco init` CLI \uC5D4\uD2B8\uB9AC\uD3EC\uC778\uD2B8"
+- "`.context` \uAE30\uBCF8 \uB514\uB809\uD1A0\uB9AC/\uBB38\uC11C \uD15C\uD50C\uB9BF\
+  \ \uC0DD\uC131"
+- "front matter \uAE30\uBCF8\uAC12\uACFC \uC791\uC131 \uAC00\uC774\uB4DC \uC139\uC158\
+  \ \uD3EC\uD568"
+- "init \uD6C4 `validate_docs.py` \uD1B5\uACFC \uAC00\uB2A5\uD55C \uCD5C\uC18C \uC0C1\
+  \uD0DC \uBCF4\uC7A5"
 verification:
-  - uv run --extra dev ruff check .
-  - uv run --extra dev mypy .
-  - uv run --extra dev pytest -q
-  - uv run --extra dev python scripts/validate_docs.py
-links: [PLAN-MAIN, ARCH-INDEX, FLOW-MODE-TRANSITION]
+- uv run --extra dev ruff check .
+- uv run --extra dev mypy .
+- uv run --extra dev pytest -q
+- uv run --extra dev python scripts/validate_docs.py
+links:
+- PLAN-MAIN
+- ARCH-INDEX
+- FLOW-MODE-TRANSITION
 ---
 
 # Task: T-015-init-context-bootstrap
@@ -92,8 +108,8 @@ links: [PLAN-MAIN, ARCH-INDEX, FLOW-MODE-TRANSITION]
 
 ## Implementation Result
 
-- Pending (do not fill until the task is completed)
+- Implemented taco init bootstrap via CLI-to-tool mapping with tools-layer templates, fail_on_existing policy, and taco.yaml plus .context skeleton generation.
 
 ## Verification Result
 
-- Pending (do not fill until the task is completed)
+- Added init bootstrap unit/CLI/integration tests and passed ruff, mypy, pytest, and validate_docs checks.

@@ -253,3 +253,26 @@ def test_cli_main_task_block_dry_run(tmp_path: Path, capsys) -> None:
     assert output["ok"] is True
     assert output["data"]["applied"] is False
     assert output["data"]["status_to"] == "blocked"
+
+
+def test_cli_main_init_bootstraps_context_and_rejects_rerun(
+    tmp_path: Path, capsys
+) -> None:
+    first = main(["init"], cwd=tmp_path)
+    first_output = json.loads(capsys.readouterr().out)
+    assert first == 0
+    assert first_output["ok"] is True
+    created_files = first_output["data"]["created_files"]
+    assert ".context/project/overview.md" in created_files
+    assert ".context/project/plan.md" in created_files
+    assert ".context/project/architecture/index.md" in created_files
+    assert ".context/governance/code-principles.md" in created_files
+    assert ".context/governance/git/index.md" in created_files
+    assert ".context/governance/doc/index.md" in created_files
+    assert (tmp_path / "taco.yaml").exists()
+
+    second = main(["init"], cwd=tmp_path)
+    second_output = json.loads(capsys.readouterr().out)
+    assert second == 1
+    assert second_output["ok"] is False
+    assert second_output["error"]["code"] == "init_target_exists"

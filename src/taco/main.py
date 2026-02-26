@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from taco.cli import CliError, map_cli_to_tool
-from taco.tools import ToolError, call_tool, load_repo_state
+from taco.tools import ToolError, call_bootstrap_tool, call_tool, load_repo_state
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -14,6 +14,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--config", default="taco.yaml", help="config file path")
 
     domain_subparsers = parser.add_subparsers(dest="domain", required=True)
+    domain_subparsers.add_parser("init")
 
     task_parser = domain_subparsers.add_parser("task")
     task_sub = task_parser.add_subparsers(dest="action", required=True)
@@ -77,11 +78,15 @@ def main(argv: list[str] | None = None, cwd: Path | None = None) -> int:
     options = _to_options(args)
 
     try:
-        tool_name, payload = map_cli_to_tool(args.domain, args.action, options)
         root = cwd or Path.cwd()
-        config_path = (root / str(args.config)).resolve()
-        state = load_repo_state(root, config_path)
-        response = call_tool(state, tool_name, payload)
+        action = str(getattr(args, "action", "") or "")
+        tool_name, payload = map_cli_to_tool(args.domain, action, options)
+        if tool_name == "project.init":
+            response = call_bootstrap_tool(root, tool_name, payload)
+        else:
+            config_path = (root / str(args.config)).resolve()
+            state = load_repo_state(root, config_path)
+            response = call_tool(state, tool_name, payload)
     except (CliError, ToolError, FileNotFoundError) as exc:
         if isinstance(exc, (CliError, ToolError)):
             response = {
