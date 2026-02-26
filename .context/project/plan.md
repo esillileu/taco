@@ -9,6 +9,7 @@ focus: Close feature gaps while enforcing plan/build mode separation and determi
 active_intents:
 - I-001
 - I-020
+- I-021
 active_tasks: []
 blocked_tasks: []
 next_tasks: []
@@ -142,5 +143,6 @@ links:
 
 - [I-001](./intents/I-001-intent-plan-mode.md)
 - [I-020](./intents/I-020-file-size-and-srp-refactor.md)
+- [I-021](./intents/I-021-refactor-plan-gate-task-generation.md)
 
 ## Next Tasks

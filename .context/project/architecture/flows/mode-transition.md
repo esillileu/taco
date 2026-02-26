@@ -26,6 +26,7 @@ constraints:
 intent_refs:
 - I-001
 - I-020
+- I-021
 links:
 - PLAN-MAIN
 - ARCH-INDEX
