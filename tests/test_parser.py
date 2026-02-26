@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from taco.parser import ParseConfig, ParserError, parse_markdown_sections
+from taco.core.parsing import ParseConfig, ParserError, parse_markdown_sections
 
 
 def test_parse_markdown_sections_builds_expected_slices() -> None:

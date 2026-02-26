@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from taco.indexer import (
+from taco.core.indexing import (
     DocumentInput,
     IndexConfig,
     IndexerError,

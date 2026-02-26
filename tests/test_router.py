@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from taco.indexer import DocumentInput, IndexConfig, build_index
-from taco.router import RouterConfig, RouterError, resolve_write_target
+from taco.core.indexing import DocumentInput, IndexConfig, build_index
+from taco.core.routing import RouterConfig, RouterError, resolve_write_target
 
 
 def _index_config() -> IndexConfig:

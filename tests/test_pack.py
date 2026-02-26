@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from taco.indexer import DocumentInput, IndexConfig, build_index
-from taco.pack import BudgetConfig, PackError, build_task_pack
+from taco.core.indexing import DocumentInput, IndexConfig, build_index
+from taco.core.packing import BudgetConfig, PackError, build_task_pack
 
 
 def _index_config() -> IndexConfig:

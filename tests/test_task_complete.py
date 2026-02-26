@@ -4,7 +4,8 @@ from pathlib import Path
 
 import yaml
 
-from taco.tools import call_tool, load_repo_state
+from taco.apps.composition import build_repo_state as load_repo_state
+from taco.apps.composition import call_tool
 
 
 def _write(root: Path, rel: str, text: str) -> None:
