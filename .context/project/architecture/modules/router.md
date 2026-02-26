@@ -40,3 +40,7 @@ Computes deterministic write targets for `task.record` operations.
 
 - Must not modify markdown content.
 - Must not depend on CLI/MCP transport details.
+
+## Implementation Layout
+
+- `src/taco/core/routing/router.py` owns route resolution implementation.

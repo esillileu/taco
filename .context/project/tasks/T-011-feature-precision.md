@@ -77,7 +77,7 @@ links:
 ## Implementation Result
 
 - Pending (do not fill until the task is completed)
-- Updated Phase 5 from placeholders to executable tasks (T-012~T-014) and linked mode-transition flow into plan/architecture/overview
+- Updated Phase 5 from draft notes to executable tasks (T-012~T-014) and linked mode-transition flow into plan/architecture/overview
 
 - Feature matrix gap fixes applied across pack/record/complete flows; mode-transition and plan links aligned.
 ## Verification Result

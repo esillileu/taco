@@ -67,3 +67,14 @@ links: []
 - Behavior-first testing:
   - Test observable behavior and contracts, not implementation internals.
   - Build shared fixture and golden-output tests to enforce Python/Rust parity.
+
+## Runtime Operation Principles
+<!-- taco:ref=PRINCIPLES-OPS-001 -->
+
+- MCP lifecycle determinism:
+  - Require `initialize` before tool listing/calls.
+  - Treat `notifications/initialized` and `exit` as notification-only paths.
+  - After `shutdown`, reject non-exit requests with a stable runtime error.
+- Error boundary clarity:
+  - Map parse/validation/runtime failures to stable JSON-RPC error envelopes.
+  - Avoid silent failures; return explicit error code and message at runtime boundaries.

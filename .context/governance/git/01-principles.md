@@ -16,8 +16,8 @@ links: []
 
 ## References
 
-- [Git Rules Index](../git.md) - entry point for git conventions
-- [Documentation Guide](../docs.md) - operational writing rules
+- [Git Rules Index](./index.md) - entry point for git conventions
+- [Documentation Guide](../doc/index.md) - operational writing rules
 - [Branch Rules](./02-branches.md) - branch execution policy
 
 ## Rules

@@ -2,9 +2,11 @@
 
 ## Loader-first behavior
 
-- Always call `uv run taco task pack --task-id <TASK_ID>` before coding.
+- In build mode, call `uv run taco task pack` only when you need to load task execution context.
 - Use `uv run taco task targets --task-id <TASK_ID> --route-type <ROUTE_TYPE>` before writing completion notes.
 - Do not read large docs directly when a snippet is sufficient; call `uv run taco doc snippet --path <PATH> --anchor-id <ANCHOR_ID>`.
+- Use `.context/project/entrypoint-plan.md` as the first loader in plan mode.
+- Use `.context/project/entrypoint-build.md` as the first loader in build mode.
 
 ## Recording behavior
 

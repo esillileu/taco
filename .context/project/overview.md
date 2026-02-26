@@ -3,7 +3,7 @@ id: PROJ-OVERVIEW
 type: anchor
 title: Project Overview
 status: active
-links: [PROJ-INTENT-INDEX, ARCH-INDEX, PLAN-MAIN, FLOW-TASK-PACK, FLOW-MODE-TRANSITION]
+links: [PROJ-INTENT-INDEX, ARCH-INDEX, PLAN-MAIN, FLOW-TASK-PACK, FLOW-MODE-TRANSITION, PROJ-ENTRYPOINT-PLAN, PROJ-ENTRYPOINT-BUILD]
 ---
 
 # Project Overview
@@ -35,12 +35,15 @@ TACO orchestrates task-first execution by delivering one executable task with on
 ## Mode Model
 
 - Plan mode:
-  - updates architecture/plan/task documents
+  - starts from `.context/project/entrypoint-plan.md`
+  - updates intent/plan metadata and queue state
   - validates references and transition readiness
-  - uses `plan.intent.*` for intent-first planning (`list`, `view`, `pack`)
+  - uses `plan.intent.*` automation chain (`list`, `view`, `propose`, `autodesign`, `generate_tasks`, `review_bundle`, `apply`)
+  - returns task blueprints only; task body text is authored by agents
   - for `kind: refactor`, runs code analysis before design/task finalization
   - uses `plan.pack` when a specific task-level plan pack is needed
 - Build mode:
+  - starts from `.context/project/entrypoint-build.md`
   - executes one task with bundle-only context
   - records implementation/verification outcomes
   - when refactor changes architecture boundaries, records design document updates with task closeout
@@ -72,6 +75,7 @@ TACO orchestrates task-first execution by delivering one executable task with on
 
 ## Expected Outcome
 
-- An agent can start planning from one `plan.intent.index` call, then move to `task.pack` for build execution.
+- An agent can start planning from `plan.intent.propose` and complete plan updates through approval-gated `plan.intent.apply`, then move to `task.pack` for build execution.
+- Build handoff requires task content readiness; blueprint-only tasks fail `task.pack` until authored.
 - Task execution and document updates remain traceable through IDs and links.
 - Architecture scale-up is handled by node splitting, not by copying definitions into tasks.

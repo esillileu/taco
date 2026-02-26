@@ -23,7 +23,7 @@ TACO (Task Context Orchestrator) is a local MCP server that builds deterministic
 | `plan.intent.autodesign` | `taco plan intent autodesign --intent-id I-001` |
 | `plan.intent.generate_tasks` | `taco plan intent generate-tasks --intent-id I-001` |
 | `plan.intent.review_bundle` | `taco plan intent review-bundle --intent-id I-001 --retry-on-fail 1` |
-| `plan.intent.apply` | `taco plan intent apply --intent-id I-001 --fingerprint <fp> --retry-on-fail 1 --apply` |
+| `plan.intent.apply` | `taco plan intent apply --intent-id I-001 --fingerprenroint <fp> --retry-on-fail 1 --apply` |
 | `doc.snippet` | `taco doc snippet --path .context/project/architecture/index.md --anchor-id architecture-index` |
 | `issue.triage` | `taco issue triage --title "fix broken parser"` |
 | `convention.get` | `taco convention get --topic git` |
@@ -53,6 +53,38 @@ TACO (Task Context Orchestrator) is a local MCP server that builds deterministic
 - Long term: replace runtime with a pure Rust binary.
 - Constraint: keep MCP/CLI contracts stable across both runtimes.
 - Dogfooding: use `taco` on this repository as soon as each tool becomes available.
+
+## MCP Runtime (STDIO)
+
+- Start MCP runtime:
+  - `uv run python -m taco.apps.mcp.main`
+- Supported core methods:
+  - `initialize`
+  - `notifications/initialized` (notification, no response)
+  - `ping`
+  - `tools/list`
+  - `tools/call`
+  - `shutdown`
+  - `exit` (notification, no response)
+- Tool execution path reuses canonical dispatcher (`call_tool`) so CLI and MCP stay contract-compatible.
+- Codex-style smoke check:
+
+```bash
+cat <<'JSON' | uv run python -m taco.apps.mcp.main
+{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}
+{"jsonrpc":"2.0","method":"notifications/initialized","params":{}}
+{"jsonrpc":"2.0","id":2,"method":"tools/list"}
+{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"task.list","arguments":{}}}
+{"jsonrpc":"2.0","id":4,"method":"shutdown"}
+{"jsonrpc":"2.0","method":"exit"}
+JSON
+```
+
+### MCP Runtime Notes
+
+- `tools/list` and `tools/call` require successful `initialize` first.
+- After `shutdown`, requests other than `exit` are rejected with MCP error `-32000`.
+- Use `notifications/initialized` and `exit` as notifications (no response expected).
 
 ## Python Tooling
 

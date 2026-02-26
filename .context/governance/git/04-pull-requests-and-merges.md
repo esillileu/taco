@@ -16,7 +16,7 @@ links: []
 
 ## References
 
-- [Git Rules Index](../git.md) - entry point for git conventions
+- [Git Rules Index](./index.md) - entry point for git conventions
 - [CI and Branch Protection](./05-ci-and-branch-protection.md) - merge prerequisites
 - [Commit Rules](./03-commits.md) - commit quality baseline
 

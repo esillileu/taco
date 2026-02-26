@@ -44,7 +44,7 @@ links: []
 <!-- taco:pack=task.core,pack.next_actions -->
 
 - Build index DTOs for:
-  - doc type classification (intent, architecture, plan, glossary, principles, task, todo, git docs)
+  - doc type classification (intent, architecture, plan, glossary, principles, task, work-queue, git docs)
   - task id extraction
   - cross-reference links
   - heading lookup map

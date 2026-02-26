@@ -9,9 +9,16 @@ focus: Close feature gaps while enforcing plan/build mode separation and determi
 active_intents:
 - I-001
 - I-020
-- I-021
+- I-030
+- I-031
+- I-032
+- I-033
+- I-034
+- I-035
+- I-036
 active_tasks: []
-blocked_tasks: []
+blocked_tasks:
+- T-026
 next_tasks: []
 milestones:
 - M1-front-matter-migration
@@ -28,113 +35,51 @@ links:
 
 # Plan
 
-## Planning Boundary
+## Scope
 
-- This plan is an execution map for priority and sequencing.
-- Design definitions stay in architecture documents.
-- Task body content is not duplicated in plan.
+- This document manages task queue and execution state only.
+- Project design definitions are managed in architecture documents.
+- Intent rationale and design direction are managed in intent documents.
 
-## Phase 0: Readiness Baseline (Current)
+## Task Queue Policy
 
-- Lock `.context` as canonical knowledge root.
-- Enforce front matter and id/reference validation as hard failure.
-- Keep task execution deterministic and traceable to referenced nodes.
-- Keep legacy docs removed to avoid dual-SSOT drift.
+- `active_tasks`: tasks currently executing in build mode.
+- `blocked_tasks`: tasks paused with explicit blocking reason.
+- `next_tasks`: ordered backlog candidates for activation.
+- One task is activated at a time unless an explicit parallel execution decision is recorded.
 
-## Phase 1: Scope and Interface Definition
-<!-- taco:ref=PLAN-PHASE1-001 -->
+## Intent Queue Policy
 
-- Define tool input/output contracts from front matter-driven model.
-- Keep MCP and CLI naming parity (`taco <domain> <action>`).
-- Stabilize DTO/error contract for Python-first and Rust-final migration.
-- Define reference policy as `id-only` and heading-slice extraction.
-- Define module/flow/schema ownership boundaries from source mapping.
+- `active_intents` tracks intents currently in plan-mode refinement.
+- Intent activation does not imply immediate build execution.
+- Task generation and queue updates are recorded as plan state transitions, not design content.
 
-## Phase 2: Approach and Verification Design
-<!-- taco:ref=PLAN-PHASE2-001 -->
+## Mode Handoff Policy
 
-- Standardize task metadata (`plan_ref`, `scope`, `references`, `verification`).
-- Standardize architecture node metadata (`module/flow/schema/anchor`).
-- Define deterministic pack ordering and budget/drop behavior.
-- Define validation gates for duplicate id, invalid type, unresolved references.
-- Define regression matrix for task pack, task record, and doc snippet behavior.
+- Plan mode updates queue state and handoff readiness.
+- Build mode executes one active task and records implementation/verification outputs.
+- If build reveals boundary ambiguity, dependency spillover, or missing verification criteria, the task is blocked and returned to plan queue management.
 
-## Phase 3: Architecture and Contract Alignment
+## Refactor Intake Policy
 
-- Reflect all runtime modules in architecture index and leaf docs.
-- Reflect transport and error contracts as explicit schemas.
-- Ensure architecture docs remain ahead of implementation scope.
+- Refactor intents require explicit readiness evidence before build activation.
+- Design-change review outcomes are tracked as task state decisions in this plan.
+- Detailed boundary/contract/flow definitions remain in architecture docs.
 
-## Phase 4: Feature Precision and Completeness
+## Operational Loop (Task Management)
 
-- Remove missing workflow gaps across task tools and closeout flows.
-- Promote front matter references to primary selection mechanism.
-- Add deterministic behavior checks for each tool path.
-- Keep one-call pack readiness and end-to-end task completion viability.
+1. Select active intent and choose executable task candidates.
+2. Move one task into `active_tasks` when readiness requirements are satisfied.
+3. Execute in build mode and record results or block reason.
+4. On completion or block, update `active_tasks`, `blocked_tasks`, and `next_tasks`.
+5. Keep `active_intents` synchronized with current planning focus.
 
-## Phase 5: Mode Separation and Transition Safety
+## Exit Criteria (Management)
 
-- Keep plan mode and build mode responsibilities explicitly separated.
-- Require explicit transition checks before entering build mode.
-- Require build-to-plan fallback on boundary/scope/verification ambiguity.
-- Keep mode transition policy consistent with architecture flow docs.
-- Split pack defaults by mode intent:
-  - `plan.pack` defaults: `ARCH-INDEX`, `PLAN-MAIN`, `GOV-DOC-INDEX`
-  - `task.pack` defaults: `GOV-CODE-PRINCIPLES`
-- Keep config migration backward compatible:
-  - prefer `pack.required_refs_by_tool`
-  - fallback to legacy `pack.common_required_refs`
-- Keep build git rules on-demand by behavior (`convention.get` -> optional `doc.snippet`).
-- Add intent-first planning surface:
-  - `plan.intent.list`
-  - `plan.intent.view`
-  - `plan.intent.index`
-  - intent links to executable tasks via `task_refs`.
-- Add refactor lane policy:
-  - `kind: refactor` must execute code-analysis before design/task finalization.
-  - refactor closeout must include architecture/flow sync when boundaries changed.
-
-### Phase 5 Task Breakdown
-
-- `T-012`: Plan->Build readiness gate enforcement
-- `T-013`: Build->Plan fallback state and blocked sync
-- `T-014`: Planner tool surface (view/locator/validator)
-
-## Phase 6: CLI Ergonomics and Human Workflow
-
-- Add human-readable context output mode for CLI.
-- Keep machine envelope as default.
-- Ensure parity between CLI behavior and MCP contract.
-
-### Phase 6 Task Breakdown
-
-- `T-015`: Init/bootstrap command for context scaffolding
-- `T-016`: Human-readable CLI context output mode
-
-## Phase 7: Rust Migration Readiness
-
-- Freeze DTO/error envelope contracts at tool boundary.
-- Ensure core logic remains language-portable and side-effect bounded.
-- Build behavior-first parity tests to support Python-to-Rust transition.
-
-## Operational Loop
-
-1. Select active intent from plan and inspect with `plan.intent.view`.
-2. Call `plan.intent.index` to gather planning index tied to executable tasks.
-3. If intent is refactor, run code analysis and confirm design impact before finalizing docs/tasks.
-4. Refine architecture/plan/task docs in plan mode.
-5. Switch to build mode and call `task.pack` for the selected task.
-6. Implement and verify against task verification criteria.
-7. Call `task.targets` / `task.record` (or `task.complete`) to record outcomes.
-8. For refactor impact, sync architecture/flow docs before marking task done.
-9. Update plan status, active/next tasks, and intent linkage.
-
-## Exit Criteria
-
-- All active tasks have deterministic pack output.
-- No unresolved references in `.context`.
-- Architecture index fully covers runtime module map.
-- Pack/record/snippet flows pass integration and regression checks.
+- Queue state is consistent (`active/blocked/next`).
+- Every blocked task has explicit reason and follow-up path.
+- Every completed task has recorded implementation and verification outcomes.
+- Build handoff decisions are traceable from this plan to task records.
 
 ## Active Tasks
 
@@ -142,7 +87,8 @@ links:
 ## Active Intents
 
 - [I-001](./intents/I-001-intent-plan-mode.md)
-- [I-020](./intents/I-020-file-size-and-srp-refactor.md)
-- [I-021](./intents/I-021-refactor-plan-gate-task-generation.md)
+- [I-020](./intents/I-020-intent-blueprint-handoff.md)
+- [I-030](./intents/I-030-intent-codex-mcp-server.md)
+- [I-031](./intents/I-031-intent-codex-mcp-hardening.md)
 
 ## Next Tasks

@@ -23,3 +23,8 @@ links: [MOD-MAIN, MOD-TOOLS-DISPATCH]
 # Tool Error Schema
 
 Shared error response contract.
+
+## Standard Planning Gate Codes
+
+- `refactor_plan_missing`: returned when refactor-planning gate requires `## Refactor Plan` evidence and it is missing or non-actionable.
+- `task_scope_policy_violation`: returned when generated task scope violates implementation-only constraint for gated workflows.

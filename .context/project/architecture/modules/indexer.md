@@ -39,3 +39,8 @@ Builds a deterministic context graph from `.context` documents.
 
 - Must not apply budget policy.
 - Must not write repository files.
+
+## Implementation Layout
+
+- `src/taco/core/indexing/` owns indexing logic.
+- No runtime `exec`-based part loading is used.

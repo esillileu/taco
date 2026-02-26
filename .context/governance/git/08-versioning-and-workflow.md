@@ -16,7 +16,7 @@ links: []
 
 ## References
 
-- [Git Rules Index](../git.md) - entry point for git conventions
+- [Git Rules Index](./index.md) - entry point for git conventions
 - [PR and Merge Rules](./04-pull-requests-and-merges.md) - integration rules
 - [Issues and Agent Decisions](./06-issues-and-agent-decisions.md) - start rules
 

@@ -59,7 +59,7 @@ links: []
 <!-- taco:pack=task.plans,pack.acceptance_checks,pack.verification_commands -->
 
 - Confirm links resolve across `.context/project/` and `.context/project/dev/`.
-- Confirm todo tracking points to `.context/project/tasks/*`.
+- Confirm work tracking points to `.context/project/tasks/*`.
 - Confirm task heading contract is validated by `scripts/validate_docs.py`.
 
 ## Implementation Result
@@ -68,7 +68,7 @@ links: []
   - SSOT: `.context/project/overview.md`, `.context/project/architecture/index.md`, `.context/project/plan.md`, `.context/project/architecture/schemas/glossary.md`
   - Operational: `.context/governance/*`
 - Added detailed operational docs:
-  - documentation guide, principles, todo board, git convention index and detailed files
+  - documentation guide, principles, task board, git convention index and detailed files
 - Added task contract-aligned files for `T-001`..`T-007` and completed them with implementation/verification outcomes.
 - Aligned canonical tool naming and CLI mapping across active docs:
   - `task.*`, `doc.*`, `issue.*`, `convention.*`
@@ -83,5 +83,5 @@ links: []
 - Confirmed cross-document link and structure consistency through:
   - `python scripts/validate_docs.py` during initial setup
   - `uv run --extra dev python scripts/validate_docs.py` after uv standardization
-- Confirmed todo/task tracking points to `.context/project/tasks/*` and headings comply with `taco.yaml` contract.
+- Confirmed task tracking points to `.context/project/tasks/*` and headings comply with `taco.yaml` contract.
 - Confirmed readiness guard tests and full test suite pass in current state.

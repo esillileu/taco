@@ -16,7 +16,7 @@ links: []
 
 ## References
 
-- [Git Rules Index](../git.md) - related git guidance
+- [Git Rules Index](./index.md) - related git guidance
 - [Commit Rules](./03-commits.md) - next step after branching
 - [Issues and Agent Decisions](./06-issues-and-agent-decisions.md) - start requirements
 

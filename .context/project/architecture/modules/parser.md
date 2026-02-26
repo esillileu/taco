@@ -39,3 +39,7 @@ Parses markdown into reusable section slices and extracts front matter metadata.
 
 - Must not infer task priority or context relevance.
 - Must not mutate source text.
+
+## Implementation Layout
+
+- `src/taco/core/parsing/parser.py` owns parser implementation.

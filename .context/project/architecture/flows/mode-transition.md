@@ -26,7 +26,13 @@ constraints:
 intent_refs:
 - I-001
 - I-020
-- I-021
+- I-030
+- I-031
+- I-032
+- I-033
+- I-034
+- I-035
+- I-036
 links:
 - PLAN-MAIN
 - ARCH-INDEX
@@ -46,7 +52,13 @@ Define how TACO separates document planning from task execution and when the run
   - `plan.intent.list` to discover active intents
   - `plan.intent.view` to inspect intent metadata and linked tasks
   - `plan.intent.index` to load plan-scoped index from intent linkage
+  - `plan.intent.propose` to normalize planning proposal
+  - `plan.intent.autodesign` to derive design/document updates
+  - `plan.intent.generate_tasks` to emit executable tasks
+  - `plan.intent.review_bundle` to gate proposal/design/task consistency
+  - `plan.intent.apply` to apply with explicit approval and fingerprint gate
 - Output: executable task nodes with explicit references, scope boundaries, and verification criteria.
+- Plan automation output is blueprint-level metadata; section body authoring is agent-owned.
 - Required checks:
   - front matter integrity and reference validity
   - impact visibility for linked architecture nodes
@@ -92,6 +104,21 @@ Switch back to plan mode when execution discovers:
 - Build-mode closeout:
   - if analysis/implementation changed ownership or dependency boundaries, update architecture/flow docs in the same task closeout cycle
   - do not mark refactor task complete when required design sync is missing
+
+## Refactor Planning Gate Lane
+
+- Trigger: intent metadata marks refactor-planning gate policy.
+- Plan-mode precondition:
+  - require `## Refactor Plan` section with actionable steps before gated review/apply checks can pass quality gate.
+  - fail with deterministic reason (`refactor_plan_missing`) when section is absent or empty.
+- Task generation rule:
+  - generated task scope must describe executable code-change work only.
+  - design-level updates stay in intent/architecture/plan docs and are not emitted as task goals.
+- Runtime status:
+  - planning automation uses `plan.intent.propose -> autodesign -> generate_tasks -> review_bundle -> apply`.
+  - `plan.intent.apply` requires explicit approval and matching decision fingerprint.
+  - `plan.intent.apply` updates metadata/queue only; it does not author task body content.
+  - `plan.intent.review_bundle` fails when generated task blueprints are not yet authored or fail `task.pack` readiness checks.
 
 ## Operational Effect
 

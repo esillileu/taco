@@ -16,27 +16,26 @@ links: []
 
 ## References
 
-- [Documentation Guide](./docs.md) - operational document rules
-- [Todo](./todo.md) - active task tracking
+- [Documentation Guide](../doc/index.md) - operational document rules
 
 ## Files
 
-- [01-principles.md](./git/01-principles.md)
-- [02-branches.md](./git/02-branches.md)
-- [03-commits.md](./git/03-commits.md)
-- [04-pull-requests-and-merges.md](./git/04-pull-requests-and-merges.md)
-- [05-ci-and-branch-protection.md](./git/05-ci-and-branch-protection.md)
-- [06-issues-and-agent-decisions.md](./git/06-issues-and-agent-decisions.md)
-- [07-change-size-and-forbidden.md](./git/07-change-size-and-forbidden.md)
-- [08-versioning-and-workflow.md](./git/08-versioning-and-workflow.md)
+- [01-principles.md](./01-principles.md)
+- [02-branches.md](./02-branches.md)
+- [03-commits.md](./03-commits.md)
+- [04-pull-requests-and-merges.md](./04-pull-requests-and-merges.md)
+- [05-ci-and-branch-protection.md](./05-ci-and-branch-protection.md)
+- [06-issues-and-agent-decisions.md](./06-issues-and-agent-decisions.md)
+- [07-change-size-and-forbidden.md](./07-change-size-and-forbidden.md)
+- [08-versioning-and-workflow.md](./08-versioning-and-workflow.md)
 
 ## Action Map
 
-- start a new task -> [06-issues-and-agent-decisions.md](./git/06-issues-and-agent-decisions.md), [02-branches.md](./git/02-branches.md)
-- create commits -> [03-commits.md](./git/03-commits.md)
-- open or merge a PR -> [04-pull-requests-and-merges.md](./git/04-pull-requests-and-merges.md), [05-ci-and-branch-protection.md](./git/05-ci-and-branch-protection.md)
-- check safety guardrails -> [01-principles.md](./git/01-principles.md), [07-change-size-and-forbidden.md](./git/07-change-size-and-forbidden.md)
-- check release flow -> [08-versioning-and-workflow.md](./git/08-versioning-and-workflow.md)
+- start a new task -> [06-issues-and-agent-decisions.md](./06-issues-and-agent-decisions.md), [02-branches.md](./02-branches.md)
+- create commits -> [03-commits.md](./03-commits.md)
+- open or merge a PR -> [04-pull-requests-and-merges.md](./04-pull-requests-and-merges.md), [05-ci-and-branch-protection.md](./05-ci-and-branch-protection.md)
+- check safety guardrails -> [01-principles.md](./01-principles.md), [07-change-size-and-forbidden.md](./07-change-size-and-forbidden.md)
+- check release flow -> [08-versioning-and-workflow.md](./08-versioning-and-workflow.md)
 
 ## When to Reference
 

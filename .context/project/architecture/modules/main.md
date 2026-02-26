@@ -19,3 +19,9 @@ links: [MOD-CLI-MAPPER, MOD-TOOLS-DISPATCH, SCH-TOOL-ENVELOPE]
 # Main Module
 
 Entrypoint for CLI command parsing, tool invocation, and envelope output.
+
+## Implementation Layout
+
+- `src/taco/apps/main.py` owns app entry and composition root behavior.
+- CLI runtime is implemented in `src/taco/apps/cli/main.py`.
+- No runtime `exec`-based part loading is used.

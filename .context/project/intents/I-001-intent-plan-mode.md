@@ -12,15 +12,15 @@ links: [PROJ-INTENT-INDEX, PLAN-MAIN, ARCH-INDEX, T-018]
 
 ## Intent
 
-- Keep planning flow intent-first so plan mode starts from intent, not directly from task execution.
+- Keep planning flow intent-first so plan mode starts from intent definition before task execution.
 
-## Scope
+## Design Boundary
 
-- Add and maintain `plan.intent.list/view/index` as the planning entry surface.
-- Keep intent-to-task linkage explicit through `task_refs` in intent front matter.
-- Reflect the same flow in overview, plan, architecture, and README.
+- Intent must represent design rationale and expected boundary-level outcome.
+- Intent metadata may link to tasks (`task_refs`) for traceability, but implementation sequencing remains outside this document.
+- Detailed module/flow/schema definitions remain in architecture documents.
 
-## Expected Outcome
+## Expected Design Outcome
 
-- Planner can call `plan.intent.index` to receive plan-scoped architecture/flow/schema coverage with linked executable task references.
-- Build remains task-execution-centric through `task.pack` and task closeout tools.
+- Plan mode can evaluate this intent against architecture boundaries before build handoff.
+- Build mode stays task-pack driven and does not reinterpret intent semantics.

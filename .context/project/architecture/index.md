@@ -7,6 +7,10 @@ modules_dir: .context/project/architecture/modules
 flows_dir: .context/project/architecture/flows
 schemas_dir: .context/project/architecture/schemas
 modules:
+  - MOD-APPS
+  - MOD-ADAPTERS
+  - MOD-PORTS
+  - MOD-EXTENSIONS
   - MOD-MAIN
   - MOD-CLI-MAPPER
   - MOD-TOOLS-DISPATCH
@@ -29,12 +33,17 @@ schemas:
   - SCH-TOOL-ERROR
   - SCH-TOOL-ENVELOPE
 dependency_rules:
-  - main -> cli -> tools -> core
-  - main -> tools -> core
-  - core modules must not depend on CLI transport
+  - apps -> adapters -> ports -> core
+  - apps -> extensions -> core
+  - extensions -> ports -> core
+  - core must not depend on adapters or extensions
 links:
   - PROJ-INTENT-INDEX
   - MOD-MAIN
+  - MOD-APPS
+  - MOD-ADAPTERS
+  - MOD-PORTS
+  - MOD-EXTENSIONS
   - MOD-CLI-MAPPER
   - MOD-TOOLS-DISPATCH
   - MOD-PARSER
@@ -68,6 +77,7 @@ Architecture anchor for modules, flows, and schemas. This document is global SSO
 - Git-backed markdown is the primary source of truth.
 - Index/cache is auxiliary and must not override source docs.
 - Context assembly is deterministic extraction, not free-form summarization.
+- Architecture docs define structure only; they do not manage task queue state.
 
 ## Reference Model
 
@@ -78,69 +88,63 @@ Architecture anchor for modules, flows, and schemas. This document is global SSO
 
 ## Processing Pipeline
 
-1. CLI parse (`main.py`): parse command and options.
-2. CLI map (`cli.py`): map command to canonical tool call.
-3. State load (`tools.py`): load config, scan docs, build index.
-4. Core parse/index (`parser.py`, `indexer.py`): build heading/node lookups.
-5. Tool dispatch (`tools.py`): route to task/doc/issue/convention handlers.
-6. Pack/Router (`pack.py`, `router.py`): build bundle or write target.
-7. Envelope emit (`main.py`): return JSON response envelope.
+1. App entry (`apps/main.py`): parse command and compose runtime.
+2. CLI map (`apps/cli`): map command to canonical tool call.
+3. State load (`adapters/fs/repo_state.py`): load config, scan docs, build index.
+4. Core parse/index (`core/parsing`, `core/indexing`): build heading/node lookups.
+5. Core tool dispatch (`core/usecases/dispatcher.py`): route to task/doc/issue/convention handlers.
+6. Core pack/router (`core/packing`, `core/routing`): build bundle or write target.
+7. Envelope emit (`apps/main.py`): return JSON response envelope.
 
-## Operating Modes
+## Mode Architecture
 
-- Plan mode: update architecture/plan/task nodes with validation and impact awareness.
-- Plan mode intent workflow:
-  - discover intents via `plan.intent.list`
-  - inspect intent metadata via `plan.intent.view`
-  - load intent-linked planning index via `plan.intent.index`
-  - if `intent.kind == refactor`, run code analysis before architecture/task finalization
-- Plan mode pack policy: use `plan.pack` with default refs `ARCH-INDEX`, `PLAN-MAIN`, `GOV-DOC-INDEX`.
-- Build mode: execute exactly one task using `task.pack` output and record results.
-- Build mode pack policy: use `task.pack` with default ref `GOV-CODE-PRINCIPLES`.
-- Pack config compatibility: prefer `pack.required_refs_by_tool` and fallback to `pack.common_required_refs`.
-- Build git policy: fetch git conventions on demand via `convention.get` before git actions.
-- Mode switches follow `FLOW-MODE-TRANSITION` and must be explicit.
-- Refactor lane requires design-sync verification when build changes architecture boundaries.
+- Plan mode responsibilities:
+  - refine design boundaries, contracts, and structural data/event flow.
+  - decide design-level impact classification for intent changes.
+- Build mode responsibilities:
+  - execute scoped code changes from task pack.
+  - produce implementation/verification evidence without redefining architecture.
+- Mode switch contract is defined by `FLOW-MODE-TRANSITION`.
+- Queue sequencing and active/blocked task management are owned by `PLAN-MAIN` (not this document).
 
-## Interface Surface
+## Layer Layout
 
-- `task.list`
-- `task.pack`
-- `task.targets`
-- `task.record`
-- `task.complete`
-- `task.block`
-- `plan.pack`
-- `plan.intent.list`
-- `plan.intent.view`
-- `plan.intent.index`
-- `plan.intent.propose`
-- `plan.intent.autodesign`
-- `plan.intent.generate_tasks`
-- `plan.intent.review_bundle`
-- `plan.intent.apply`
-- `doc.snippet`
-- `issue.triage`
-- `convention.get`
-- `plan.view`
-- `plan.locate`
-- `plan.validate`
+- `apps/`: composition root and executable entrypoints only.
+- `adapters/`: runtime/fs/git implementations.
+- `ports/`: storage/repository abstractions.
+- `core/`: deterministic domain logic (parsing/indexing/packing/routing/task/plan).
+- `extensions/`: optional extension surface (resource-backed by `resources/templates`).
 
 ## Source Mapping
 
-- `src/taco/main.py`: CLI entrypoint, argparse, response printing.
-- `src/taco/cli.py`: CLI-to-tool mapping and option validation.
-- `src/taco/tools.py`: repo state loading, tool dispatch handlers.
-- `src/taco/parser.py`: markdown heading and marker slicing.
-- `src/taco/indexer.py`: index graph and front matter metadata indexing.
-- `src/taco/pack.py`: task bundle assembly with budget and ref resolution.
-- `src/taco/router.py`: write-target resolution for record flows.
+- `src/taco/apps/main.py`: CLI entrypoint and composition root.
+- `src/taco/apps/cli/`: app-facing CLI surface, mapping, and validation.
+- `src/taco/adapters/mcp/`: MCP transport adapter surface.
+- `src/taco/adapters/fs/repo_state.py`: config/index loading adapter.
+- `src/taco/apps/composition.py`: shared composition/wiring for tool runtime.
+- `src/taco/apps/cli/main.py`: CLI runtime entry implementation.
+- `src/taco/core/parsing/`: markdown heading and marker slicing.
+- `src/taco/core/indexing/`: index graph and front matter metadata indexing.
+- `src/taco/core/packing/`: task bundle assembly with budget/ref resolution.
+- `src/taco/core/routing/`: write-target resolution and route policy (`policy.py`).
+- `src/taco/core/task/`: task readiness/design-sync/plan-sync decision logic.
+- `src/taco/core/plan/`: planning domain rules (`config_policy.py`, `text_ops.py`, `markdown_ops.py`, `plan_policy.py`, `types.py`).
+- `src/taco/core/usecases/dispatcher.py`: tool dispatch facade.
+- `src/taco/core/usecases/{bootstrap,build,doc,plan,task}/`: domain-specific usecase handlers.
+- `src/taco/resources/templates/`: externalized scaffolding templates.
+- `src/taco/ports/`: storage/repository port interfaces.
+- `src/taco/adapters/fs/storage.py`: `StoragePort` implementation.
+- `src/taco/adapters/git/repository.py`: `RepositoryPort` implementation.
 
 ## Module Responsibilities
 
 - `MOD-MAIN`: process entrypoint and transport-neutral output envelope.
+- `MOD-APPS`: executable composition root and entry surfaces.
+- `MOD-ADAPTERS`: infrastructure adapters for CLI/runtime/fs/git.
+- `MOD-PORTS`: core-facing external dependency interfaces.
+- `MOD-EXTENSIONS`: optional plugin/template surface.
 - `MOD-CLI-MAPPER`: validates CLI options and canonical tool mapping.
-- `MOD-TOOLS-DISPATCH`: central dispatch and repo state orchestration.
+- `MOD-TOOLS-DISPATCH`: core usecase dispatcher and envelope orchestration.
 - `MOD-PARSER`: deterministic heading and marker extraction.
 - `MOD-INDEXER`: typed document graph and id/reference lookup.
 - `MOD-PACK`: task-centered context bundle assembly.
@@ -148,10 +152,12 @@ Architecture anchor for modules, flows, and schemas. This document is global SSO
 
 ## Dependency Rules
 
-- `main.py` may depend on `cli.py` and `tools.py`.
-- `tools.py` may depend on core modules (`indexer`, `pack`, `router`).
-- `parser/indexer/pack/router` must not depend on CLI concerns.
-- `pack` and `router` consume index graph but do not write source docs directly.
+- `apps/*` may depend on `adapters/*` and `core/*` (and optional extension surface).
+- `adapters/*` may depend on `ports/*` and `core/*`.
+- `extensions/*` is optional and may depend on `ports/*` and `core/*`.
+- `core/*` may depend only on `ports/*` and `core/*`.
+- `core` must not import `adapters` or `extensions`.
+- `pack` and `routing` consume index graph but do not write source docs directly.
 - concurrency/cache policy is an optional layer, separated from correctness logic.
 
 ## Portability Principles
@@ -160,6 +166,15 @@ Architecture anchor for modules, flows, and schemas. This document is global SSO
 - I/O is isolated in adapters; core logic remains side-effect free where possible.
 - Public errors follow one structure: `code`, `message`, `details`.
 - Rules/policy are configured, not hardcoded.
+
+## Documentation Boundary
+
+- Architecture documents must not include task queue directives or sprint-like status tracking.
+- Architecture documents define only:
+  - module responsibility boundaries
+  - dependency direction
+  - public contract and schema
+  - structural processing flow
 
 ## Architectural Risks to Track
 

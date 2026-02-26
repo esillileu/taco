@@ -16,7 +16,7 @@ links: []
 
 ## References
 
-- [Git Rules Index](../git.md) - entry point for git conventions
+- [Git Rules Index](./index.md) - entry point for git conventions
 - [PR and Merge Rules](./04-pull-requests-and-merges.md) - merge policy
 - [Change Size and Forbidden Actions](./07-change-size-and-forbidden.md) - guardrail set
 

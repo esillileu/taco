@@ -69,7 +69,7 @@ links: []
 
 - Acceptance criteria:
   - no stale tool names remain in active docs
-  - no unresolved placeholder markers remain in active phase task plans (`T-001` to `T-007`)
+  - no unresolved draft markers remain in active phase task plans (`T-001` to `T-007`)
   - architecture and principles reflect Python-first/Rust-final strategy
   - dogfooding policy is explicitly documented
 - Verification evidence should include command outputs and referenced file lines.
@@ -79,7 +79,7 @@ links: []
 - Added readiness-gate test suite at `tests/test_preimplementation_readiness.py`.
 - Encoded acceptance criteria as executable checks:
   - stale legacy tool names are absent in active docs
-  - active task plans (`T-001`..`T-007`) have no unresolved placeholders
+  - active task plans (`T-001`..`T-007`) have no unresolved draft markers
   - architecture/principles include Python-first and Rust-final strategy
   - dogfooding policy is explicitly documented
 - Readiness checks now run alongside existing lint/type/test/doc validation workflow.

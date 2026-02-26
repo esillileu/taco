@@ -29,3 +29,8 @@ Defines task metadata needed for deterministic context assembly.
 - `plan_ref`
 - `scope.in`, `scope.out`
 - `references.modules|flows|schemas|governance`
+
+## Workflow Policy Notes
+
+- For refactor-planning gate workflows, task goals and scope must remain implementation-focused.
+- Design updates are tracked in intent/architecture/plan documents, not in executable task goal text.

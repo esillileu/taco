@@ -41,3 +41,8 @@ Assembles one-task execution context using required references and minimal gover
 
 - Must not rank snippets probabilistically.
 - Must not include unrelated task documents.
+
+## Implementation Layout
+
+- `src/taco/core/packing/` owns pack assembly logic.
+- No runtime `exec`-based part loading is used.

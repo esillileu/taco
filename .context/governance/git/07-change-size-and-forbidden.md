@@ -16,7 +16,7 @@ links: []
 
 ## References
 
-- [Git Rules Index](../git.md) - entry point for git conventions
+- [Git Rules Index](./index.md) - entry point for git conventions
 - [CI and Branch Protection](./05-ci-and-branch-protection.md) - shared branch safety
 - [Versioning and Workflow](./08-versioning-and-workflow.md) - full workflow baseline
 
