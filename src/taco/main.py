@@ -12,6 +12,11 @@ from taco.tools import ToolError, call_bootstrap_tool, call_tool, load_repo_stat
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="taco")
     parser.add_argument("--config", default="taco.yaml", help="config file path")
+    parser.add_argument(
+        "--human-context",
+        action="store_true",
+        help="render supported context responses as human-readable text",
+    )
 
     domain_subparsers = parser.add_subparsers(dest="domain", required=True)
     domain_subparsers.add_parser("init")
@@ -104,6 +109,7 @@ def main(argv: list[str] | None = None, cwd: Path | None = None) -> int:
     args = parser.parse_args(argv)
     options = _to_options(args)
 
+    human_context = bool(options.get("human_context", False))
     try:
         root = cwd or Path.cwd()
         action = str(getattr(args, "action", "") or "")
@@ -111,6 +117,20 @@ def main(argv: list[str] | None = None, cwd: Path | None = None) -> int:
             intent_action = str(getattr(args, "intent_action", "") or "")
             action = f"intent.{intent_action}"
         tool_name, payload = map_cli_to_tool(args.domain, action, options)
+        if human_context and tool_name not in {"task.pack", "doc.snippet"}:
+            response = {
+                "ok": False,
+                "error": {
+                    "code": "invalid_mode",
+                    "message": (
+                        "human-context mode supports only "
+                        "task pack and doc snippet"
+                    ),
+                    "details": {"tool": tool_name},
+                },
+            }
+            print(json.dumps(response, ensure_ascii=False))
+            return 1
         if tool_name == "project.init":
             response = call_bootstrap_tool(root, tool_name, payload)
         else:
@@ -137,7 +157,10 @@ def main(argv: list[str] | None = None, cwd: Path | None = None) -> int:
                 },
             }
 
-    print(json.dumps(response, ensure_ascii=False))
+    if human_context and response.get("ok"):
+        print(_render_human_context(tool_name, response.get("data", {})))
+    else:
+        print(json.dumps(response, ensure_ascii=False))
     return 0 if response.get("ok") else 1
 
 
@@ -183,7 +206,37 @@ def _to_options(args: argparse.Namespace) -> dict[str, Any]:
         options["retry_on_fail"] = args.retry_on_fail
     if hasattr(args, "apply"):
         options["dry_run"] = not bool(args.apply)
+    if getattr(args, "human_context", False):
+        options["human_context"] = True
     return options
+
+
+def _render_human_context(tool_name: str, data: Any) -> str:
+    if not isinstance(data, dict):
+        return "(no data)"
+    if tool_name == "task.pack":
+        snippets = data.get("context_snippets", [])
+        if not isinstance(snippets, list) or not snippets:
+            return "(no context snippets)"
+        blocks: list[str] = []
+        for row in snippets:
+            if not isinstance(row, dict):
+                continue
+            group = str(row.get("group", "")).strip() or "snippet"
+            path = str(row.get("path", "")).strip() or "(unknown)"
+            anchor = str(row.get("anchor_id", "")).strip()
+            content = str(row.get("content", "")).rstrip()
+            target = f"{path}#{anchor}" if anchor else path
+            blocks.append(f"[{group}] {target}\n{content}")
+        return "\n\n".join(blocks) if blocks else "(no context snippets)"
+    if tool_name == "doc.snippet":
+        heading = str(data.get("heading", "")).strip() or "Snippet"
+        path = str(data.get("path", "")).strip() or "(unknown)"
+        anchor = str(data.get("anchor_id", "")).strip()
+        target = f"{path}#{anchor}" if anchor else path
+        snippet = str(data.get("snippet", "")).rstrip()
+        return f"{heading} ({target})\n\n{snippet}"
+    return "(unsupported tool)"
 
 
 if __name__ == "__main__":

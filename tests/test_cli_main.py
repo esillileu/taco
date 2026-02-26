@@ -251,6 +251,46 @@ def test_cli_main_task_pack_and_doc_snippet(tmp_path: Path, capsys) -> None:
     assert snip_output["ok"] is True
 
 
+def test_cli_main_human_context_for_pack_and_snippet(tmp_path: Path, capsys) -> None:
+    _write_fixture_repo(tmp_path)
+    code_pack = main(
+        ["--human-context", "task", "pack", "--task-id", "T-008"],
+        cwd=tmp_path,
+    )
+    pack_output = capsys.readouterr().out
+    assert code_pack == 0
+    assert "[task.core]" in pack_output
+    assert "docs/dev/tasks/T-008-cli-entrypoint.md" in pack_output
+
+    code_snip = main(
+        [
+            "--human-context",
+            "doc",
+            "snippet",
+            "--path",
+            "docs/architecture.md",
+            "--anchor-id",
+            "system",
+        ],
+        cwd=tmp_path,
+    )
+    snip_output = capsys.readouterr().out
+    assert code_snip == 0
+    assert "System (docs/architecture.md#system)" in snip_output
+    assert "system detail" in snip_output
+
+
+def test_cli_main_human_context_rejects_unsupported_command(
+    tmp_path: Path, capsys
+) -> None:
+    _write_fixture_repo(tmp_path)
+    code = main(["--human-context", "task", "list"], cwd=tmp_path)
+    output = json.loads(capsys.readouterr().out)
+    assert code == 1
+    assert output["ok"] is False
+    assert output["error"]["code"] == "invalid_mode"
+
+
 def test_cli_main_plan_view(tmp_path: Path, capsys) -> None:
     _write_fixture_repo(tmp_path)
     code = main(["plan", "view"], cwd=tmp_path)

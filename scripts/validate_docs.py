@@ -20,6 +20,8 @@ ALLOWED_TYPES = {
 COMMON_REQUIRED = ("id", "type", "title", "status")
 TASK_STATUS = {"todo", "active", "done", "blocked"}
 INTENT_STATUS = {"active", "ready_for_build", "done", "blocked"}
+INTENT_KIND = {"general", "feature", "fix", "docs", "ops", "refactor"}
+DESIGN_IMPACT = {"tentative", "none", "minor", "major", "unspecified"}
 
 
 def load_config() -> dict[str, Any]:
@@ -95,6 +97,32 @@ def validate_front_matter(
             errors.append(
                 f"{rel}: intent status must be one of {sorted(INTENT_STATUS)}"
             )
+        if node_type == "intent":
+            kind = fm.get("kind", "general")
+            if not isinstance(kind, str) or kind.strip().lower() not in INTENT_KIND:
+                errors.append(
+                    f"{rel}: intent kind must be one of {sorted(INTENT_KIND)}"
+                )
+            impact = fm.get("design_impact")
+            if impact is not None:
+                if (
+                    not isinstance(impact, str)
+                    or impact.strip().lower() not in DESIGN_IMPACT
+                ):
+                    errors.append(
+                        f"{rel}: intent design_impact must be one of "
+                        f"{sorted(DESIGN_IMPACT)}"
+                    )
+            if isinstance(kind, str) and kind.strip().lower() == "refactor":
+                if not isinstance(impact, str) or not impact.strip():
+                    errors.append(
+                        f"{rel}: refactor intent requires non-empty design_impact"
+                    )
+                elif impact.strip().lower() not in DESIGN_IMPACT:
+                    errors.append(
+                        f"{rel}: refactor intent design_impact must be one of "
+                        f"{sorted(DESIGN_IMPACT)}"
+                    )
 
         existing = id_to_path.get(node_id)
         if existing:

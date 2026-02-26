@@ -493,12 +493,16 @@ def _plan_intent_view(state: RepoState, args: dict[str, Any]) -> dict[str, Any]:
         )
     meta = doc.metadata if isinstance(doc.metadata, dict) else {}
     task_refs = _collect_string_list(meta.get("task_refs"))
+    kind = _intent_kind(meta)
+    design_impact = _intent_design_impact(meta)
     return {
         "intent": {
             "id": intent_id,
             "path": path,
             "title": str(meta.get("title", "")),
             "status": str(meta.get("status", "")),
+            "kind": kind,
+            "design_impact": design_impact,
             "plan_ref": str(meta.get("plan_ref", "")),
             "task_refs": task_refs,
             "links": _collect_string_list(meta.get("links")),
@@ -524,6 +528,15 @@ def _plan_intent_index(state: RepoState, args: dict[str, Any]) -> dict[str, Any]
         )
     meta = doc.metadata if isinstance(doc.metadata, dict) else {}
     task_refs = _collect_string_list(meta.get("task_refs"))
+    kind = _intent_kind(meta)
+    design_impact = _intent_design_impact(meta)
+    refactor_analysis = _build_refactor_analysis(
+        state=state,
+        intent_id=intent_id,
+        intent_path=path,
+        kind=kind,
+        design_impact=design_impact,
+    )
     existing_refs = [
         task_id for task_id in task_refs if task_id in state.index.task_index
     ]
@@ -550,10 +563,13 @@ def _plan_intent_index(state: RepoState, args: dict[str, Any]) -> dict[str, Any]
             "path": path,
             "title": str(meta.get("title", "")),
             "status": str(meta.get("status", "")),
+            "kind": kind,
+            "design_impact": design_impact,
             "plan_ref": str(meta.get("plan_ref", "")),
             "task_refs": task_refs,
             "links": _collect_string_list(meta.get("links")),
         },
+        "analysis": refactor_analysis,
         "coverage": coverage,
         "candidate_tasks": candidate_tasks,
         "gaps": gaps,
@@ -568,6 +584,9 @@ def _plan_intent_index(state: RepoState, args: dict[str, Any]) -> dict[str, Any]
                 *[item["id"] for item in coverage["flows"]],
                 *[item["id"] for item in coverage["schemas"]],
                 *gaps,
+                str(refactor_analysis.get("completed", False)),
+                str(refactor_analysis.get("max_file_lines", 0)),
+                str(refactor_analysis.get("oversized_file_count", 0)),
             ]
         ),
     }
@@ -613,6 +632,7 @@ def _plan_intent_autodesign(state: RepoState, args: dict[str, Any]) -> dict[str,
     intent = data["intent"]
     intent_id = str(intent["id"])
     gaps = data["gaps"]
+    analysis = data.get("analysis", {})
     updates: list[dict[str, Any]] = []
     if "flow_missing_intent_ref" in gaps:
         updates.append(
@@ -647,16 +667,20 @@ def _plan_intent_autodesign(state: RepoState, args: dict[str, Any]) -> dict[str,
                 }
             )
 
-    quality_gate = {
+    quality_gate: dict[str, Any] = {
         "pass": len(gaps) == 0 or len(updates) > 0,
         "fail_reasons": [],
     }
+    if bool(analysis.get("required")) and not bool(analysis.get("completed")):
+        quality_gate["pass"] = False
+        quality_gate["fail_reasons"].append("refactor_analysis_required")
     if len(gaps) > 0 and len(updates) == 0:
         quality_gate["pass"] = False
-        quality_gate["fail_reasons"] = ["no_autodesign_action_for_gap"]
+        quality_gate["fail_reasons"].append("no_autodesign_action_for_gap")
 
     return {
         "intent": intent,
+        "analysis": analysis,
         "gaps": gaps,
         "proposed_updates": updates,
         "quality_gate": quality_gate,
@@ -718,6 +742,7 @@ def _plan_intent_review_bundle(
         )
     approval_bundle = {
         "intent": indexed["intent"],
+        "analysis": indexed.get("analysis", {}),
         "coverage": indexed["coverage"],
         "gaps": indexed["gaps"],
         "autodesign_updates": autodesign["proposed_updates"],
@@ -790,6 +815,30 @@ def _plan_intent_apply(state: RepoState, args: dict[str, Any]) -> dict[str, Any]
                 for task in generated_tasks
                 if isinstance(task, dict)
             ],
+        )
+        _append_plan_next_tasks(
+            state,
+            [
+                str(task.get("task_id", ""))
+                for task in generated_tasks
+                if isinstance(task, dict)
+            ],
+        )
+        review_path = _write_review_record(state, intent_id, review)
+        writes.append(
+            {
+                "path": review_path,
+                "action": "write_review_record",
+                "created": True,
+            }
+        )
+    else:
+        writes.append(
+            {
+                "path": _review_record_relpath(state, intent_id, actual_fingerprint),
+                "action": "write_review_record",
+                "created": False,
+            }
         )
 
     return {
@@ -886,11 +935,26 @@ def _task_complete(state: RepoState, args: dict[str, Any]) -> dict[str, Any]:
     task_text = task_file.read_text(encoding="utf-8")
     task_meta, _ = _split_front_matter(task_text)
     status = task_meta.get("status")
+    required_design_sync = _required_refactor_design_sync(state, task_id, task_meta)
     if isinstance(status, str) and status.strip() == "done":
         raise ToolError(
             "task_already_done",
             "task is already marked done",
             {"task_id": task_id},
+        )
+    if required_design_sync and not _has_design_sync_evidence(
+        implementation, verification
+    ):
+        details: dict[str, Any] = {
+            "task_id": task_id,
+            "required_for_intents": required_design_sync,
+            "required_marker": "design-sync:",
+            "required_path_hint": ".context/project/architecture/*.md",
+        }
+        raise ToolError(
+            "design_sync_required",
+            "refactor task requires design-sync evidence before completion",
+            details,
         )
 
     implementation_target = resolve_write_target(
@@ -934,6 +998,7 @@ def _task_complete(state: RepoState, args: dict[str, Any]) -> dict[str, Any]:
                 "implementation": implementation_target.to_dict(),
                 "verification": verification_target.to_dict(),
             },
+            "design_sync_required_for": required_design_sync,
         }
 
     task_file.write_text(updated_task, encoding="utf-8")
@@ -950,6 +1015,7 @@ def _task_complete(state: RepoState, args: dict[str, Any]) -> dict[str, Any]:
             "implementation": implementation_target.to_dict(),
             "verification": verification_target.to_dict(),
         },
+        "design_sync_required_for": required_design_sync,
     }
 
 
@@ -1292,6 +1358,53 @@ def _intent_summaries(intent_ids: list[str], index: IndexGraph) -> list[dict[str
     return rows
 
 
+def _required_refactor_design_sync(
+    state: RepoState, task_id: str, task_meta: dict[str, Any]
+) -> list[dict[str, str]]:
+    intent_ids: set[str] = set()
+    for value in _collect_string_list(task_meta.get("links")):
+        path = state.index.node_index.get(value, "")
+        if not path:
+            continue
+        doc = next((item for item in state.index.documents if item.path == path), None)
+        if doc is not None and doc.doc_type == "intent":
+            intent_ids.add(value)
+
+    for doc in state.index.documents:
+        if doc.doc_type != "intent" or not isinstance(doc.metadata, dict):
+            continue
+        refs = _collect_string_list(doc.metadata.get("task_refs"))
+        if task_id in refs and doc.node_id:
+            intent_ids.add(doc.node_id)
+
+    required: list[dict[str, str]] = []
+    for intent_id in sorted(intent_ids):
+        path = state.index.node_index.get(intent_id, "")
+        doc = next((item for item in state.index.documents if item.path == path), None)
+        if doc is None or doc.doc_type != "intent":
+            continue
+        meta = doc.metadata if isinstance(doc.metadata, dict) else {}
+        kind = _intent_kind(meta)
+        impact = _intent_design_impact(meta)
+        if kind == "refactor" and impact in {"minor", "major"}:
+            required.append({"intent_id": intent_id, "design_impact": impact})
+    return required
+
+
+def _has_design_sync_evidence(implementation: str, verification: str) -> bool:
+    combined = f"{implementation}\n{verification}"
+    lowered = combined.lower()
+    if "design-sync:" not in lowered:
+        return False
+    has_path = bool(
+        re.search(r"\.context/project/architecture/[\w./-]+\.md", combined)
+    )
+    has_anchor = "ARCH-INDEX" in combined or bool(
+        re.search(r"FLOW-[A-Z0-9-]+", combined)
+    )
+    return has_path or has_anchor
+
+
 def _intent_candidate_tasks(
     task_ids: list[str], state: RepoState
 ) -> list[dict[str, Any]]:
@@ -1409,6 +1522,20 @@ def _plan_id_from_config(state: RepoState) -> str:
     return "PLAN-MAIN"
 
 
+def _intent_kind(meta: dict[str, Any]) -> str:
+    value = meta.get("kind", "")
+    if isinstance(value, str) and value.strip():
+        return value.strip().lower()
+    return "general"
+
+
+def _intent_design_impact(meta: dict[str, Any]) -> str:
+    value = meta.get("design_impact", "")
+    if isinstance(value, str) and value.strip():
+        return value.strip().lower()
+    return "unspecified"
+
+
 def _normalize_line(value: str) -> str:
     return re.sub(r"\s+", " ", value).strip()
 
@@ -1484,6 +1611,119 @@ def _task_templates_for_gaps(gaps: list[str]) -> list[dict[str, str | int]]:
             continue
         templates.append(spec)
     return templates
+
+
+def _dedupe_templates(
+    templates: list[dict[str, str | int]]
+) -> list[dict[str, str | int]]:
+    deduped: list[dict[str, str | int]] = []
+    seen: set[str] = set()
+    for template in templates:
+        slug = str(template.get("slug", "")).strip()
+        source_path = str(template.get("source_path", "")).strip()
+        key = f"{slug}:{source_path}"
+        if not slug or key in seen:
+            continue
+        seen.add(key)
+        deduped.append(template)
+    return deduped
+
+
+def _intent_needs_refactor(state: RepoState, intent: dict[str, Any]) -> bool:
+    kind = str(intent.get("kind", "")).strip().lower()
+    if kind:
+        return kind == "refactor"
+    title = str(intent.get("title", "")).lower()
+    path = str(intent.get("path", ""))
+    body = ""
+    if path:
+        body = state.index.document_texts.get(path, "").lower()
+    text = " ".join([title, body])
+    keywords = (
+        "refactor",
+        "single responsibility",
+        "srp",
+        "250",
+        "file",
+        "split",
+        "module",
+    )
+    return any(keyword in text for keyword in keywords)
+
+
+def _refactor_templates_for_repo(state: RepoState) -> list[dict[str, str | int]]:
+    oversized = _oversized_source_files(state.root, max_lines=250)
+    templates: list[dict[str, str | int]] = []
+    for path, line_count in oversized:
+        slug = f"split-{path.split('/')[-1].replace('.', '-')}"
+        templates.append(
+            {
+                "slug": slug.lower(),
+                "reason": (
+                    f"split oversized file `{path}` ({line_count} lines) "
+                    "into single-responsibility modules"
+                ),
+                "risk_score": 9 if line_count >= 400 else 8,
+                "source_path": path,
+            }
+        )
+    return templates
+
+
+def _oversized_source_files(root: Path, max_lines: int) -> list[tuple[str, int]]:
+    candidates: list[tuple[str, int]] = []
+    src_root = root / "src"
+    if not src_root.exists():
+        return candidates
+    for path in sorted(src_root.rglob("*.py")):
+        if not path.is_file():
+            continue
+        rel = path.relative_to(root).as_posix()
+        line_count = len(path.read_text(encoding="utf-8").splitlines())
+        if line_count > max_lines:
+            candidates.append((rel, line_count))
+    candidates.sort(key=lambda item: (-item[1], item[0]))
+    return candidates
+
+
+def _build_refactor_analysis(
+    state: RepoState,
+    intent_id: str,
+    intent_path: str,
+    kind: str,
+    design_impact: str,
+) -> dict[str, Any]:
+    required = kind == "refactor"
+    oversized = _oversized_source_files(state.root, max_lines=250) if required else []
+    max_lines = max((item[1] for item in oversized), default=0)
+    if max_lines >= 600:
+        suggested = "major"
+    elif max_lines >= 300:
+        suggested = "minor"
+    elif required:
+        suggested = "none"
+    else:
+        suggested = "unspecified"
+    completed = (state.root / "src").exists() if required else True
+    findings = [
+        {
+            "path": path,
+            "line_count": line_count,
+            "reason": "exceeds_file_line_budget_250",
+        }
+        for path, line_count in oversized[:20]
+    ]
+    return {
+        "required": required,
+        "completed": completed,
+        "intent_id": intent_id,
+        "intent_path": intent_path,
+        "design_impact": design_impact,
+        "suggested_design_impact": suggested,
+        "oversized_file_count": len(oversized),
+        "max_file_lines": max_lines,
+        "findings": findings,
+    }
 
 
 def _next_task_ids(state: RepoState, count: int) -> list[str]:
@@ -1566,18 +1806,30 @@ def _plan_intent_generate_tasks_from_index(
     intent_id = str(intent["id"])
     title = str(intent["title"])
     gaps = list(indexed["gaps"])
+    analysis = indexed.get("analysis", {})
     existing_candidates = indexed["candidate_tasks"]
 
     generated: list[dict[str, Any]] = []
     templates = _task_templates_for_gaps(gaps)
+    if _intent_needs_refactor(state, intent):
+        templates.extend(_refactor_templates_for_repo(state))
+        templates.append(
+            {
+                "slug": "design-split-boundaries",
+                "reason": "define file split boundaries and ownership before edits",
+                "risk_score": 9,
+            }
+        )
+    templates = _dedupe_templates(templates)
     next_ids = _next_task_ids(state, len(templates))
     for idx, template in enumerate(templates):
         task_id = next_ids[idx]
         risk_score = int(template["risk_score"])
+        source_path = str(template.get("source_path", "") or "")
         generated.append(
             {
                 "task_id": task_id,
-                "title": f"{task_id.lower()}-{template['slug']}",
+                "title": f"{task_id}-{template['slug']}",
                 "intent_id": intent_id,
                 "intent_title": title,
                 "reason": template["reason"],
@@ -1585,6 +1837,7 @@ def _plan_intent_generate_tasks_from_index(
                 "risk_score": risk_score,
                 "status": "todo",
                 "ready_for_build": False,
+                "source_path": source_path,
             }
         )
 
@@ -1598,6 +1851,9 @@ def _plan_intent_generate_tasks_from_index(
         "fail_reasons": [],
         "fix_suggestions": [],
     }
+    if bool(analysis.get("required")) and not bool(analysis.get("completed")):
+        quality_gate["pass"] = False
+        quality_gate["fail_reasons"].append("refactor_analysis_required")
     if gaps and not generated:
         quality_gate["pass"] = False
         quality_gate["fail_reasons"].append("gaps_unresolved_by_generation")
@@ -1611,6 +1867,7 @@ def _plan_intent_generate_tasks_from_index(
 
     return {
         "intent": intent,
+        "analysis": analysis,
         "existing_candidate_tasks": sorted_candidates,
         "generated_tasks": generated,
         "quality_gate": quality_gate,
@@ -1737,6 +1994,7 @@ def _apply_generated_tasks(
     state: RepoState, intent_id: str, generated_tasks: list[Any], dry_run: bool
 ) -> list[dict[str, Any]]:
     writes: list[dict[str, Any]] = []
+    tasks_dir = _generated_tasks_dir(state)
     for item in generated_tasks:
         if not isinstance(item, dict):
             continue
@@ -1744,9 +2002,10 @@ def _apply_generated_tasks(
         title = str(item.get("title", "")).strip()
         priority = str(item.get("priority", "p1")).strip() or "p1"
         reason = str(item.get("reason", "")).strip()
+        source_path = str(item.get("source_path", "")).strip()
         if not task_id or not title:
             continue
-        rel_path = f".context/project/tasks/{title}.md"
+        rel_path = f"{tasks_dir}/{title}.md"
         target = state.root / rel_path
         if target.exists():
             writes.append({"path": rel_path, "action": "create_task", "created": False})
@@ -1757,6 +2016,7 @@ def _apply_generated_tasks(
             priority=priority,
             reason=reason,
             intent_id=intent_id,
+            source_path=source_path,
         )
         if not dry_run:
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -1765,13 +2025,34 @@ def _apply_generated_tasks(
     return writes
 
 
+def _generated_tasks_dir(state: RepoState) -> str:
+    docs = state.config_raw.get("docs", {})
+    if isinstance(docs, dict):
+        tasks_glob = docs.get("tasks_glob")
+        if isinstance(tasks_glob, str) and tasks_glob.strip():
+            parent = Path(tasks_glob.strip()).parent.as_posix()
+            if parent and parent != ".":
+                return parent.rstrip("/")
+    if state.index.task_index:
+        sample_path = next(iter(state.index.task_index.values()))
+        parent = Path(sample_path).parent.as_posix()
+        if parent and parent != ".":
+            return parent.rstrip("/")
+    return ".context/project/tasks"
+
+
 def _render_generated_task_doc(
     task_id: str,
     title: str,
     priority: str,
     reason: str,
     intent_id: str,
+    source_path: str,
 ) -> str:
+    scope_in = [source_path] if source_path else []
+    scope_in_yaml = ", ".join(scope_in)
+    scope_in_line = f"  in: [{scope_in_yaml}]" if scope_in_yaml else "  in: []"
+    goal = reason or "Address generated planning gap."
     return "\n".join(
         [
             "---",
@@ -1783,7 +2064,7 @@ def _render_generated_task_doc(
             f"priority: {priority}",
             "estimate: m",
             "scope:",
-            "  in: []",
+            scope_in_line,
             "  out: []",
             "references:",
             "  modules: [ARCH-INDEX]",
@@ -1801,11 +2082,15 @@ def _render_generated_task_doc(
             "",
             "## Goal",
             "",
-            f"- {reason or 'Address generated planning gap.'}",
+            f"- {goal}",
             "",
             "## Scope",
             "",
-            "- Fill generated scope from review bundle.",
+            (
+                f"- Refactor target: {source_path}"
+                if source_path
+                else "- Fill generated scope from review bundle."
+            ),
             "",
             "## Implementation Approach",
             "",
@@ -1847,6 +2132,65 @@ def _append_generated_tasks_to_intent(
             task_refs.append(value)
     meta["task_refs"] = task_refs
     target.write_text(_compose_front_matter(meta, body), encoding="utf-8")
+
+
+def _append_plan_next_tasks(state: RepoState, task_ids: list[str]) -> None:
+    values = [task_id.strip() for task_id in task_ids if task_id.strip()]
+    if not values:
+        return
+    plan_path = _plan_path_from_config(state.config_raw)
+    target = state.root / plan_path
+    if not target.exists():
+        return
+    text = target.read_text(encoding="utf-8")
+    meta, body = _split_front_matter(text)
+    if not meta:
+        return
+    next_tasks = _collect_string_list(meta.get("next_tasks"))
+    for task_id in values:
+        if task_id not in next_tasks:
+            next_tasks.append(task_id)
+    meta["next_tasks"] = next_tasks
+    target.write_text(_compose_front_matter(meta, body), encoding="utf-8")
+
+
+def _review_record_relpath(state: RepoState, intent_id: str, fingerprint: str) -> str:
+    safe_id = intent_id.strip() or "intent"
+    safe_fp = fingerprint.strip() or "latest"
+    intent_path = state.index.node_index.get(safe_id, "")
+    if intent_path:
+        intent_dir = Path(intent_path).parent.as_posix().rstrip("/")
+        if intent_dir:
+            return f"{intent_dir}/reviews/{safe_id}-{safe_fp}.md"
+    return f".context/project/intents/reviews/{safe_id}-{safe_fp}.md"
+
+
+def _write_review_record(
+    state: RepoState, intent_id: str, review: dict[str, Any]
+) -> str:
+    fingerprint = str(review.get("decision_fingerprint", "")).strip() or "latest"
+    rel_path = _review_record_relpath(state, intent_id, fingerprint)
+    target = state.root / rel_path
+    target.parent.mkdir(parents=True, exist_ok=True)
+    summary = "\n".join(
+        [
+            f"# Review: {intent_id}",
+            "",
+            f"- fingerprint: `{fingerprint}`",
+            (
+                "- quality_pass: "
+                f"`{bool(review.get('quality_gate', {}).get('pass', False))}`"
+            ),
+            f"- generated_tasks: `{len(review.get('generated_tasks', []))}`",
+            "",
+            "```yaml",
+            yaml.safe_dump(review, sort_keys=False),
+            "```",
+            "",
+        ]
+    )
+    target.write_text(summary, encoding="utf-8")
+    return rel_path
 
 
 def _collect_arch_nodes(state: RepoState, doc_type: str) -> list[dict[str, Any]]:
