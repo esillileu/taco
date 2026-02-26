@@ -16,10 +16,10 @@ links: []
 
 ## References
 
-- [Documentation Guide](./docs.md) - structure and writing rules
-- [Intent](../intent.md) - objective baseline
-- [Architecture](../architecture.md) - boundary baseline
-- [Plan](../plan.md) - phase baseline
+- [Documentation Guide](./doc/index.md) - structure and writing rules
+- [Intent Index](../project/intents/index.md) - planning objective baseline
+- [Architecture Index](../project/architecture/index.md) - boundary baseline
+- [Plan](../project/plan.md) - phase baseline
 
 ## Principles
 

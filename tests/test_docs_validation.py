@@ -4,6 +4,8 @@ from pathlib import Path
 def test_key_docs_exist() -> None:
     required = [
         Path('.context/project/overview.md'),
+        Path('.context/project/intents/index.md'),
+        Path('.context/project/intents/I-001-intent-plan-mode.md'),
         Path('.context/project/architecture/index.md'),
         Path('.context/project/plan.md'),
         Path('.context/project/architecture/schemas/glossary.md'),

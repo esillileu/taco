@@ -22,6 +22,7 @@ branches:
   - unknown tool branch
 constraints:
   - output envelope must be stable
+intent_refs: [I-001]
 links: [MOD-MAIN, MOD-CLI-MAPPER, MOD-TOOLS-DISPATCH, SCH-TOOL-ENVELOPE]
 ---
 

@@ -6,11 +6,14 @@ status: active
 phase: phase-feature-precision
 focus: Close feature gaps while enforcing plan/build mode separation and deterministic
   closeout
+active_intents:
+- I-001
 active_tasks:
 - T-011
-- T-016
 blocked_tasks: []
-next_tasks: []
+next_tasks:
+- T-016
+- T-019
 milestones:
 - M1-front-matter-migration
 - M2-architecture-alignment
@@ -19,6 +22,7 @@ milestones:
 - M5-mode-transition-contract
 links:
 - ARCH-INDEX
+- PROJ-INTENT-INDEX
 - PROJ-OVERVIEW
 - FLOW-MODE-TRANSITION
 ---
@@ -82,6 +86,11 @@ links:
   - prefer `pack.required_refs_by_tool`
   - fallback to legacy `pack.common_required_refs`
 - Keep build git rules on-demand by behavior (`convention.get` -> optional `doc.snippet`).
+- Add intent-first planning surface:
+  - `plan.intent.list`
+  - `plan.intent.view`
+  - `plan.intent.index`
+  - intent links to executable tasks via `task_refs`.
 
 ### Phase 5 Task Breakdown
 
@@ -108,13 +117,13 @@ links:
 
 ## Operational Loop
 
-1. Select active task from plan.
-2. Validate plan->build readiness for selected task.
-3. Call `plan.pack` for planning context or `task.pack` for build execution context.
-4. Implement and verify against task verification criteria.
-5. Call `task.targets` / `task.record` (or `task.complete`) to record outcomes.
-6. If boundary or scope changes are required, switch back to plan mode.
-7. Update plan status and next tasks.
+1. Select active intent from plan and inspect with `plan.intent.view`.
+2. Call `plan.intent.index` to gather planning index tied to executable tasks.
+3. Refine architecture/plan/task docs in plan mode.
+4. Switch to build mode and call `task.pack` for the selected task.
+5. Implement and verify against task verification criteria.
+6. Call `task.targets` / `task.record` (or `task.complete`) to record outcomes.
+7. Update plan status, active/next tasks, and intent linkage.
 
 ## Exit Criteria
 
@@ -126,6 +135,12 @@ links:
 ## Active Tasks
 
 - [T-011](./tasks/T-011-feature-precision.md)
-- [T-016](./tasks/T-016-cli-human-context-view.md)
+
+## Active Intents
+
+- [I-001](./intents/I-001-intent-plan-mode.md)
 
 ## Next Tasks
+
+- [T-016](./tasks/T-016-cli-human-context-view.md)
+- [T-019](./tasks/T-019-intent-automation-apply.md)

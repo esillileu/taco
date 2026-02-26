@@ -3,7 +3,7 @@ id: PROJ-OVERVIEW
 type: anchor
 title: Project Overview
 status: active
-links: [ARCH-INDEX, PLAN-MAIN, FLOW-TASK-PACK, FLOW-MODE-TRANSITION]
+links: [PROJ-INTENT-INDEX, ARCH-INDEX, PLAN-MAIN, FLOW-TASK-PACK, FLOW-MODE-TRANSITION]
 ---
 
 # Project Overview
@@ -25,9 +25,10 @@ TACO orchestrates task-first execution by delivering one executable task with on
 - TACO does not decide product priority by itself.
 - TACO does not treat historical narrative as required execution context.
 
-## Task-First Model
+## Intent-to-Task Model
 
-- Unit of execution is exactly one task node.
+- Planning starts from intent nodes, then maps to executable task nodes.
+- Unit of build execution is exactly one task node.
 - Task node must include execution intent, scope boundary, references, and verification criteria.
 - Pack builder resolves references to architecture/governance nodes and extracts heading slices.
 
@@ -36,7 +37,8 @@ TACO orchestrates task-first execution by delivering one executable task with on
 - Plan mode:
   - updates architecture/plan/task documents
   - validates references and transition readiness
-  - uses `plan.pack` to load plan-scoped default context
+  - uses `plan.intent.*` for intent-first planning (`list`, `view`, `pack`)
+  - uses `plan.pack` when a specific task-level plan pack is needed
 - Build mode:
   - executes one task with bundle-only context
   - records implementation/verification outcomes
@@ -65,6 +67,6 @@ TACO orchestrates task-first execution by delivering one executable task with on
 
 ## Expected Outcome
 
-- An agent can start implementation from one `task.pack` call.
+- An agent can start planning from one `plan.intent.index` call, then move to `task.pack` for build execution.
 - Task execution and document updates remain traceable through IDs and links.
 - Architecture scale-up is handled by node splitting, not by copying definitions into tasks.

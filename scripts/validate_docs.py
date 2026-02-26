@@ -7,9 +7,19 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG_PATH = ROOT / "taco.yaml"
-ALLOWED_TYPES = {"anchor", "module", "flow", "schema", "task", "plan", "governance"}
+ALLOWED_TYPES = {
+    "anchor",
+    "module",
+    "flow",
+    "schema",
+    "task",
+    "plan",
+    "intent",
+    "governance",
+}
 COMMON_REQUIRED = ("id", "type", "title", "status")
 TASK_STATUS = {"todo", "active", "done", "blocked"}
+INTENT_STATUS = {"active", "ready_for_build", "done", "blocked"}
 
 
 def load_config() -> dict[str, Any]:
@@ -81,6 +91,10 @@ def validate_front_matter(
             continue
         if node_type == "task" and status not in TASK_STATUS:
             errors.append(f"{rel}: task status must be one of {sorted(TASK_STATUS)}")
+        if node_type == "intent" and status not in INTENT_STATUS:
+            errors.append(
+                f"{rel}: intent status must be one of {sorted(INTENT_STATUS)}"
+            )
 
         existing = id_to_path.get(node_id)
         if existing:
@@ -108,6 +122,20 @@ def validate_references(
 ) -> list[str]:
     errors: list[str] = []
     known = set(id_to_path)
+    type_by_id: dict[str, str] = {}
+    for _rel, fm in fm_by_path.items():
+        node_id = fm.get("id")
+        node_type = fm.get("type")
+        if isinstance(node_id, str) and isinstance(node_type, str):
+            type_by_id[node_id] = node_type
+
+    flow_intent_refs: set[str] = set()
+    for _rel, fm in fm_by_path.items():
+        if fm.get("type") != "flow":
+            continue
+        for intent_id in _collect_ref_ids(fm.get("intent_refs")):
+            flow_intent_refs.add(intent_id)
+
     for rel, fm in fm_by_path.items():
         if not fm:
             continue
@@ -128,10 +156,54 @@ def validate_references(
                 for key in ("modules", "flows", "schemas", "governance"):
                     refs.extend(_collect_ref_ids(references.get(key)))
 
+        if fm.get("type") == "intent":
+            plan_ref = fm.get("plan_ref")
+            if isinstance(plan_ref, str) and plan_ref.strip():
+                refs.append(plan_ref.strip())
+            else:
+                errors.append(f"{rel}: intent requires non-empty plan_ref")
+
+            task_refs = fm.get("task_refs")
+            if not isinstance(task_refs, list):
+                errors.append(f"{rel}: intent requires task_refs list")
+            else:
+                refs.extend(_collect_ref_ids(task_refs))
+
         if fm.get("type") == "plan":
             refs.extend(_collect_ref_ids(fm.get("active_tasks")))
             refs.extend(_collect_ref_ids(fm.get("blocked_tasks")))
             refs.extend(_collect_ref_ids(fm.get("next_tasks")))
+            active_intents = fm.get("active_intents")
+            if active_intents is not None and not isinstance(active_intents, list):
+                errors.append(
+                    f"{rel}: plan active_intents must be a list when provided"
+                )
+            else:
+                refs.extend(_collect_ref_ids(active_intents))
+                for intent_id in _collect_ref_ids(active_intents):
+                    if type_by_id.get(intent_id) != "intent":
+                        errors.append(
+                            f"{rel}: active_intents id must reference intent: "
+                            f"{intent_id}"
+                        )
+                    if intent_id not in flow_intent_refs:
+                        errors.append(
+                            f"{rel}: active_intents intent must be referenced by "
+                            f"flow.intent_refs: "
+                            f"{intent_id}"
+                        )
+
+        if fm.get("type") == "flow":
+            intent_refs = fm.get("intent_refs")
+            if intent_refs is not None and not isinstance(intent_refs, list):
+                errors.append(f"{rel}: flow intent_refs must be a list when provided")
+            else:
+                refs.extend(_collect_ref_ids(intent_refs))
+                for intent_id in _collect_ref_ids(intent_refs):
+                    if type_by_id.get(intent_id) != "intent":
+                        errors.append(
+                            f"{rel}: intent_refs id must reference intent: {intent_id}"
+                        )
 
         for ref_id in refs:
             if ref_id not in known:

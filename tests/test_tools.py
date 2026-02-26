@@ -29,6 +29,24 @@ def _state(tmp_path: Path) -> RepoState:
             ),
         ),
         DocumentInput.from_text(
+            "docs/intents/I-001-plan-mode.md",
+            "\n".join(
+                [
+                    "---",
+                    "id: I-001",
+                    "type: intent",
+                    "title: plan mode intent",
+                    "status: active",
+                    "plan_ref: PLAN-MAIN",
+                    "task_refs: [T-005]",
+                    "links: [PLAN-MAIN, T-005, ARCH-INDEX]",
+                    "---",
+                    "",
+                    "# Intent: I-001-plan-mode",
+                ]
+            ),
+        ),
+        DocumentInput.from_text(
             "docs/architecture.md",
             "\n".join(
                 [
@@ -210,6 +228,7 @@ def _state(tmp_path: Path) -> RepoState:
         router_config=RouterConfig.default(),
         required_refs_by_tool={
             "plan.pack": ("ARCH-INDEX", "PLAN-MAIN", "GOV-DOC-INDEX"),
+            "plan.intent.index": ("ARCH-INDEX", "PLAN-MAIN", "GOV-DOC-INDEX"),
             "task.pack": ("GOV-CODE-PRINCIPLES",),
         },
     )
@@ -220,6 +239,13 @@ def test_call_tool_unknown_returns_error(tmp_path: Path) -> None:
     response = call_tool(state, "unknown.tool", {})
     assert response["ok"] is False
     assert response["error"]["code"] == "unknown_tool"
+
+
+def test_call_tool_plan_intent_pack_returns_deprecated_error(tmp_path: Path) -> None:
+    state = _state(tmp_path)
+    response = call_tool(state, "plan.intent.pack", {"intent_id": "I-001"})
+    assert response["ok"] is False
+    assert response["error"]["code"] == "deprecated_tool"
 
 
 def test_task_list_and_pack_and_targets(tmp_path: Path) -> None:
@@ -234,6 +260,56 @@ def test_task_list_and_pack_and_targets(tmp_path: Path) -> None:
     plan_packed = call_tool(state, "plan.pack", {"task_id": "T-005"})
     assert plan_packed["ok"] is True
     assert plan_packed["data"]["task_id"] == "T-005"
+    plan_intent_listed = call_tool(state, "plan.intent.list", {})
+    assert plan_intent_listed["ok"] is True
+    assert plan_intent_listed["data"]["count"] == 1
+    plan_intent_viewed = call_tool(state, "plan.intent.view", {"intent_id": "I-001"})
+    assert plan_intent_viewed["ok"] is True
+    assert plan_intent_viewed["data"]["intent"]["task_refs"] == ["T-005"]
+    plan_intent_indexed = call_tool(state, "plan.intent.index", {"intent_id": "I-001"})
+    assert plan_intent_indexed["ok"] is True
+    assert plan_intent_indexed["data"]["intent"]["id"] == "I-001"
+    assert plan_intent_indexed["data"]["candidate_tasks"][0]["task_id"] == "T-005"
+    proposed = call_tool(
+        state,
+        "plan.intent.propose",
+        {
+            "intent_id": "I-010",
+            "intent_text": "improve deterministic planning flow",
+            "title": "planning flow",
+        },
+    )
+    assert proposed["ok"] is True
+    assert proposed["data"]["intent"]["id"] == "I-010"
+    auto = call_tool(state, "plan.intent.autodesign", {"intent_id": "I-001"})
+    assert auto["ok"] is True
+    assert "proposed_updates" in auto["data"]
+    generated = call_tool(state, "plan.intent.generate_tasks", {"intent_id": "I-001"})
+    assert generated["ok"] is True
+    assert "quality_gate" in generated["data"]
+    bundle = call_tool(state, "plan.intent.review_bundle", {"intent_id": "I-001"})
+    assert bundle["ok"] is True
+    assert bundle["data"]["quality_gate"]["approval_required"] is True
+    bundle_retry = call_tool(
+        state,
+        "plan.intent.review_bundle",
+        {"intent_id": "I-001", "retry_on_fail": 1},
+    )
+    assert bundle_retry["ok"] is True
+    assert bundle_retry["data"]["retry"]["requested"] == 1
+    fingerprint = bundle_retry["data"]["decision_fingerprint"]
+    apply_preview = call_tool(
+        state,
+        "plan.intent.apply",
+        {
+            "intent_id": "I-001",
+            "fingerprint": fingerprint,
+            "retry_on_fail": 1,
+            "dry_run": True,
+        },
+    )
+    assert apply_preview["ok"] is True
+    assert apply_preview["data"]["applied"] is False
 
     target = call_tool(
         state,
@@ -273,6 +349,13 @@ def test_doc_snippet_issue_triage_and_convention(tmp_path: Path) -> None:
     )
     assert plan_locate["ok"] is True
     assert plan_locate["data"]["count"] >= 1
+    plan_locate_intent = call_tool(
+        state,
+        "plan.locate",
+        {"change_type": "intent", "target": "I-001"},
+    )
+    assert plan_locate_intent["ok"] is True
+    assert plan_locate_intent["data"]["count"] >= 1
 
     plan_validate = call_tool(state, "plan.validate", {})
     assert plan_validate["ok"] is True
@@ -465,6 +548,11 @@ def test_load_repo_state_from_config(tmp_path: Path) -> None:
         "PLAN-MAIN",
         "GOV-DOC-INDEX",
     )
+    assert state.required_refs_by_tool["plan.intent.index"] == (
+        "ARCH-INDEX",
+        "PLAN-MAIN",
+        "GOV-DOC-INDEX",
+    )
     assert state.required_refs_by_tool["task.pack"] == ("GOV-CODE-PRINCIPLES",)
 
 
@@ -474,6 +562,7 @@ def test_project_init_bootstrap_generates_minimal_context(tmp_path: Path) -> Non
     data = response["data"]
     assert data["policy"] == "fail_on_existing"
     assert ".context/project/overview.md" in data["created_files"]
+    assert ".context/project/intents/index.md" in data["created_files"]
     assert ".context/project/plan.md" in data["created_files"]
     assert ".context/project/architecture/index.md" in data["created_files"]
     assert ".context/governance/code-principles.md" in data["created_files"]

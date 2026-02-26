@@ -21,6 +21,8 @@ links: [ARCH-INDEX, PLAN-MAIN]
 ## Project Documents
 
 - `.context/project/overview.md`: project objective anchor.
+- `.context/project/intents/index.md`: intent registry anchor.
+- `.context/project/intents/I-*.md`: plan intents linked to executable tasks.
 - `.context/project/plan.md`: thin execution map and active task links.
 - `.context/project/architecture/index.md`: architecture anchor.
 - `.context/project/architecture/modules/*`: module leaves.
@@ -32,6 +34,7 @@ links: [ARCH-INDEX, PLAN-MAIN]
 
 - Every document must include valid front matter.
 - `id` is global and stable; references are `id-only`.
+- Flow documents should declare intent linkage via `intent_refs: [I-xxx]` when applicable.
 - Task documents must keep scope/verification explicit.
 - Avoid copying architecture definitions into tasks.
 - Update links and references together when splitting documents.

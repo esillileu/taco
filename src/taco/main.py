@@ -66,6 +66,30 @@ def build_parser() -> argparse.ArgumentParser:
     plan_pack = plan_sub.add_parser("pack")
     plan_pack.add_argument("--task-id", required=True)
     plan_pack.add_argument("--budget-tokens", type=int, default=None)
+    plan_intent = plan_sub.add_parser("intent")
+    plan_intent_sub = plan_intent.add_subparsers(dest="intent_action", required=True)
+    plan_intent_sub.add_parser("list")
+    plan_intent_view = plan_intent_sub.add_parser("view")
+    plan_intent_view.add_argument("--intent-id", required=True)
+    plan_intent_index = plan_intent_sub.add_parser("index")
+    plan_intent_index.add_argument("--intent-id", required=True)
+    plan_intent_index.add_argument("--budget-tokens", type=int, default=None)
+    plan_intent_propose = plan_intent_sub.add_parser("propose")
+    plan_intent_propose.add_argument("--intent-id", required=True)
+    plan_intent_propose.add_argument("--title", default="")
+    plan_intent_propose.add_argument("--intent-text", required=True)
+    plan_intent_sub.add_parser("autodesign").add_argument("--intent-id", required=True)
+    plan_intent_sub.add_parser("generate-tasks").add_argument(
+        "--intent-id", required=True
+    )
+    plan_intent_review = plan_intent_sub.add_parser("review-bundle")
+    plan_intent_review.add_argument("--intent-id", required=True)
+    plan_intent_review.add_argument("--retry-on-fail", type=int, default=0)
+    plan_intent_apply = plan_intent_sub.add_parser("apply")
+    plan_intent_apply.add_argument("--intent-id", required=True)
+    plan_intent_apply.add_argument("--fingerprint", required=True)
+    plan_intent_apply.add_argument("--retry-on-fail", type=int, default=0)
+    plan_intent_apply.add_argument("--apply", action="store_true")
     plan_sub.add_parser("view")
     plan_locate = plan_sub.add_parser("locate")
     plan_locate.add_argument("--change-type", required=True)
@@ -83,6 +107,9 @@ def main(argv: list[str] | None = None, cwd: Path | None = None) -> int:
     try:
         root = cwd or Path.cwd()
         action = str(getattr(args, "action", "") or "")
+        if args.domain == "plan" and action == "intent":
+            intent_action = str(getattr(args, "intent_action", "") or "")
+            action = f"intent.{intent_action}"
         tool_name, payload = map_cli_to_tool(args.domain, action, options)
         if tool_name == "project.init":
             response = call_bootstrap_tool(root, tool_name, payload)
@@ -142,8 +169,18 @@ def _to_options(args: argparse.Namespace) -> dict[str, Any]:
         options["change_type"] = args.change_type
     if getattr(args, "target", None) is not None:
         options["target"] = args.target
+    if getattr(args, "intent_id", None) is not None:
+        options["intent_id"] = args.intent_id
+    if getattr(args, "intent_text", None) is not None:
+        options["intent_text"] = args.intent_text
+    if getattr(args, "title", None) is not None:
+        options["title"] = args.title
     if getattr(args, "budget_tokens", None) is not None:
         options["budget_tokens"] = args.budget_tokens
+    if getattr(args, "fingerprint", None) is not None:
+        options["fingerprint"] = args.fingerprint
+    if getattr(args, "retry_on_fail", None) is not None:
+        options["retry_on_fail"] = args.retry_on_fail
     if hasattr(args, "apply"):
         options["dry_run"] = not bool(args.apply)
     return options
