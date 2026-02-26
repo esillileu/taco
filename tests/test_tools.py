@@ -7,7 +7,7 @@ import yaml
 from taco.indexer import DocumentInput, IndexConfig, build_index
 from taco.pack import BudgetConfig
 from taco.router import RouterConfig
-from taco.tools import RepoState, call_tool, load_repo_state
+from taco.tools import RepoState, call_bootstrap_tool, call_tool, load_repo_state
 
 
 def _state(tmp_path: Path) -> RepoState:
@@ -415,3 +415,26 @@ def test_load_repo_state_from_config(tmp_path: Path) -> None:
 
     state = load_repo_state(tmp_path)
     assert state.budget_config.default_tokens == 50
+
+
+def test_project_init_bootstrap_generates_minimal_context(tmp_path: Path) -> None:
+    response = call_bootstrap_tool(tmp_path, "project.init", {})
+    assert response["ok"] is True
+    data = response["data"]
+    assert data["policy"] == "fail_on_existing"
+    assert ".context/project/overview.md" in data["created_files"]
+    assert ".context/project/plan.md" in data["created_files"]
+    assert ".context/project/architecture/index.md" in data["created_files"]
+    assert ".context/governance/code-principles.md" in data["created_files"]
+    assert ".context/governance/git/index.md" in data["created_files"]
+    assert ".context/governance/doc/index.md" in data["created_files"]
+    assert (tmp_path / "taco.yaml").exists()
+
+    state = load_repo_state(tmp_path)
+    validated = call_tool(state, "plan.validate", {})
+    assert validated["ok"] is True
+    assert validated["data"]["valid"] is True
+
+    second = call_bootstrap_tool(tmp_path, "project.init", {})
+    assert second["ok"] is False
+    assert second["error"]["code"] == "init_target_exists"

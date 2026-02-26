@@ -48,6 +48,19 @@ class ToolError(ValueError):
         super().__init__(message)
 
 
+def call_bootstrap_tool(root: Path, name: str, args: dict[str, Any]) -> dict[str, Any]:
+    handlers = {
+        "project.init": _project_init,
+    }
+    handler = handlers.get(name)
+    if handler is None:
+        return _error("unknown_tool", "tool is not supported", {"tool": name})
+    try:
+        return _ok(handler(root, args))
+    except ToolError as exc:
+        return _error(exc.code, str(exc), exc.details)
+
+
 def load_repo_state(root: Path, config_path: Path | None = None) -> RepoState:
     cfg_path = config_path or (root / "taco.yaml")
     raw = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
@@ -102,6 +115,273 @@ def call_tool(state: RepoState, name: str, args: dict[str, Any]) -> dict[str, An
         return _ok(handler(state, args))
     except (ToolError, PackError, RouterError) as exc:
         return _error(exc.code, str(exc), exc.details)
+
+
+def _project_init(root: Path, _args: dict[str, Any]) -> dict[str, Any]:
+    directories = (
+        ".context/project/architecture/modules",
+        ".context/project/architecture/flows",
+        ".context/project/architecture/schemas",
+        ".context/project/tasks",
+        ".context/governance/git",
+        ".context/governance/doc",
+    )
+    files = _init_template_files()
+
+    existing = [path for path in files if (root / path).exists()]
+    if existing:
+        raise ToolError(
+            "init_target_exists",
+            "init targets already exist",
+            {"policy": "fail_on_existing", "paths": ",".join(sorted(existing))},
+        )
+
+    created_dirs: list[str] = []
+    for rel in directories:
+        target = root / rel
+        if not target.exists():
+            target.mkdir(parents=True, exist_ok=True)
+            created_dirs.append(rel)
+        else:
+            target.mkdir(parents=True, exist_ok=True)
+
+    created_files: list[str] = []
+    for rel, content in files.items():
+        path = root / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+        created_files.append(rel)
+
+    return {
+        "policy": "fail_on_existing",
+        "created_directories": sorted(created_dirs),
+        "created_files": sorted(created_files),
+        "created_count": len(created_files),
+    }
+
+
+def _init_template_files() -> dict[str, str]:
+    return {
+        "taco.yaml": "\n".join(
+            [
+                "repo:",
+                '  root: "."',
+                "",
+                "docs:",
+                '  intent: ".context/project/overview.md"',
+                '  architecture: ".context/project/architecture/index.md"',
+                '  principles: [".context/governance/code-principles.md"]',
+                '  plan: ".context/project/plan.md"',
+                '  doc_map: ".context/governance/doc/index.md"',
+                '  glossary: ".context/project/architecture/schemas/glossary.md"',
+                '  todo: [".context/project/plan.md"]',
+                '  tasks_glob: ".context/project/tasks/T-*.md"',
+                "",
+                "parsing:",
+                "  task_required_headings:",
+                '    - "Intent"',
+                '    - "Goal"',
+                '    - "Scope"',
+                '    - "Implementation Approach"',
+                '    - "Verification Approach"',
+                '    - "Implementation Result"',
+                '    - "Verification Result"',
+                "  prefer_anchors: true",
+                "",
+                "budget:",
+                "  default_tokens: 1800",
+                "  priority_order:",
+                '    - "task.core"',
+                '    - "task.plans"',
+                '    - "arch.snippets"',
+                '    - "principles.snippets"',
+                '    - "glossary.terms"',
+                "",
+                "pack:",
+                "  common_required_refs:",
+                '    - "ARCH-INDEX"',
+                '    - "PLAN-MAIN"',
+                '    - "GOV-CODE-PRINCIPLES"',
+                "",
+                "modules:",
+                "  git:",
+                "    enabled: true",
+                '    path: ".context/governance/git/index.md"',
+                "",
+            ]
+        ),
+        ".context/project/overview.md": "\n".join(
+            [
+                "---",
+                "id: PROJ-OVERVIEW",
+                "type: anchor",
+                "title: Project Overview",
+                "status: active",
+                "links: [ARCH-INDEX, PLAN-MAIN]",
+                "---",
+                "",
+                "# Project Overview",
+                "",
+                "## Purpose",
+                "",
+                "- Describe the project objective and execution boundary.",
+                "",
+                "## Core Objective",
+                "",
+                "- Keep execution task-first with minimal required context.",
+                "",
+                "## Non-Goals",
+                "",
+                "- List concerns intentionally out of scope.",
+                "",
+            ]
+        ),
+        ".context/project/plan.md": "\n".join(
+            [
+                "---",
+                "id: PLAN-MAIN",
+                "type: plan",
+                "title: Execution Plan",
+                "status: active",
+                "phase: phase-bootstrap",
+                "focus: Initialize task-first documentation baseline",
+                "active_tasks: []",
+                "blocked_tasks: []",
+                "next_tasks: []",
+                "links: [ARCH-INDEX, PROJ-OVERVIEW]",
+                "---",
+                "",
+                "# Plan",
+                "",
+                "## Planning Boundary",
+                "",
+                "- Keep plan as sequencing map; avoid architecture duplication.",
+                "",
+                "## Operational Loop",
+                "",
+                "1. Select one task.",
+                "2. Run `task.pack`.",
+                "3. Implement and verify.",
+                "4. Record outcomes and update plan state.",
+                "",
+                "## Active Tasks",
+                "",
+                "- None yet.",
+                "",
+                "## Next Tasks",
+                "",
+                "- Define the first executable task in `.context/project/tasks/`.",
+                "",
+            ]
+        ),
+        ".context/project/architecture/index.md": "\n".join(
+            [
+                "---",
+                "id: ARCH-INDEX",
+                "type: anchor",
+                "title: Architecture Index",
+                "status: active",
+                "links: [PROJ-OVERVIEW, PLAN-MAIN]",
+                "---",
+                "",
+                "# Architecture Index",
+                "",
+                "## Modules",
+                "",
+                "- Add module nodes under `./modules/`.",
+                "",
+                "## Flows",
+                "",
+                "- Add flow nodes under `./flows/`.",
+                "",
+                "## Schemas",
+                "",
+                "- Add schema nodes under `./schemas/`.",
+                "",
+            ]
+        ),
+        ".context/project/architecture/schemas/glossary.md": "\n".join(
+            [
+                "---",
+                "id: SCH-GLOSSARY",
+                "type: schema",
+                "title: Glossary",
+                "status: active",
+                "links: [ARCH-INDEX]",
+                "---",
+                "",
+                "# Glossary",
+                "",
+                "## Terms",
+                "",
+                "- Define shared vocabulary used by tasks and architecture.",
+                "",
+            ]
+        ),
+        ".context/governance/code-principles.md": "\n".join(
+            [
+                "---",
+                "id: GOV-CODE-PRINCIPLES",
+                "type: governance",
+                "title: Code Principles",
+                "status: active",
+                "domain: code",
+                "scope: repo",
+                "must: []",
+                "must_not: []",
+                "links: [ARCH-INDEX, PLAN-MAIN]",
+                "---",
+                "",
+                "# Principles",
+                "",
+                "- Capture code-level rules that apply across all tasks.",
+                "",
+            ]
+        ),
+        ".context/governance/git/index.md": "\n".join(
+            [
+                "---",
+                "id: GOV-GIT-INDEX",
+                "type: governance",
+                "title: Git Conventions",
+                "status: active",
+                "domain: git",
+                "scope: repo",
+                "must: []",
+                "must_not: []",
+                "links: [PLAN-MAIN]",
+                "---",
+                "",
+                "# Git Guide",
+                "",
+                "- Define branch, commit, and merge conventions.",
+                "",
+            ]
+        ),
+        ".context/governance/doc/index.md": "\n".join(
+            [
+                "---",
+                "id: GOV-DOC-INDEX",
+                "type: governance",
+                "title: Documentation Conventions",
+                "status: active",
+                "domain: doc",
+                "scope: repo",
+                "must: []",
+                "must_not: []",
+                "links: [ARCH-INDEX, PLAN-MAIN]",
+                "---",
+                "",
+                "# Documentation Guide",
+                "",
+                "## Structure",
+                "",
+                "- Keep canonical knowledge in `.context/`.",
+                "- Keep references `id`-based and maintain front matter integrity.",
+                "",
+            ]
+        ),
+    }
 
 
 def _task_list(state: RepoState, _: dict[str, Any]) -> dict[str, Any]:

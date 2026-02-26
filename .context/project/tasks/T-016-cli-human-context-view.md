@@ -2,7 +2,7 @@
 id: T-016
 type: task
 title: T-016-cli-human-context-view
-status: todo
+status: active
 plan_ref: PLAN-MAIN
 priority: p1
 estimate: m

@@ -15,6 +15,8 @@ class CliError(ValueError):
 def map_cli_to_tool(
     domain: str, action: str, options: dict[str, Any]
 ) -> tuple[str, dict[str, Any]]:
+    if domain == "init":
+        return "project.init", {}
     if domain == "task" and action == "list":
         return "task.list", {}
     if domain == "task" and action == "pack":

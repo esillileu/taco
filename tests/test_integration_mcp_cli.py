@@ -315,3 +315,9 @@ def test_cli_mapping_parity_with_mcp_calls(tmp_path: Path) -> None:
     cli_result = call_tool(state, tool_name, payload)
     mcp_result = call_tool(state, "plan.view", {})
     assert cli_result == mcp_result
+
+
+def test_cli_mapping_supports_init_bootstrap_command() -> None:
+    tool_name, payload = map_cli_to_tool("init", "", {})
+    assert tool_name == "project.init"
+    assert payload == {}
