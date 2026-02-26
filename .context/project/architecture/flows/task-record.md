@@ -21,6 +21,7 @@ branches:
   - apply write branch
 constraints:
   - write only under configured target heading
+intent_refs: [I-001]
 links: [MOD-TOOLS-DISPATCH, MOD-ROUTER, SCH-WRITE-TARGET, SCH-TOOL-ENVELOPE]
 ---
 

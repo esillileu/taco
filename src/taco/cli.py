@@ -107,6 +107,22 @@ def map_cli_to_tool(
                 )
             payload["budget_tokens"] = budget_tokens
         return "plan.pack", payload
+    if domain == "plan" and action == "intent.list":
+        return "plan.intent.list", {}
+    if domain == "plan" and action == "intent.view":
+        return "plan.intent.view", {"intent_id": _required_str(options, "intent_id")}
+    if domain == "plan" and action == "intent.index":
+        payload = {"intent_id": _required_str(options, "intent_id")}
+        budget_tokens = options.get("budget_tokens")
+        if budget_tokens is not None:
+            if not isinstance(budget_tokens, int):
+                raise CliError(
+                    "invalid_option",
+                    "budget_tokens must be an integer",
+                    {"key": "budget_tokens"},
+                )
+            payload["budget_tokens"] = budget_tokens
+        return "plan.intent.index", payload
     if domain == "plan" and action == "locate":
         locate_payload: dict[str, Any] = {
             "change_type": _required_str(options, "change_type"),

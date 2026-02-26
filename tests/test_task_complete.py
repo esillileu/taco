@@ -16,18 +16,18 @@ def _write(root: Path, rel: str, text: str) -> None:
 def _write_context_repo(root: Path) -> None:
     _write(
         root,
-        ".context/project/overview.md",
+        ".context/project/intents/index.md",
         "\n".join(
             [
                 "---",
-                "id: PROJ-OVERVIEW",
+                "id: PROJ-INTENT-INDEX",
                 "type: anchor",
-                "title: Overview",
+                "title: Intent Index",
                 "status: active",
                 "links: []",
                 "---",
                 "",
-                "# Overview",
+                "# Intent Index",
                 "",
             ]
         ),
@@ -255,7 +255,7 @@ def _write_context_repo(root: Path) -> None:
 
     config = {
         "docs": {
-            "intent": ".context/project/overview.md",
+            "intent": ".context/project/intents/index.md",
             "architecture": ".context/project/architecture/index.md",
             "plan": ".context/project/plan.md",
             "glossary": ".context/project/architecture/schemas/glossary.md",

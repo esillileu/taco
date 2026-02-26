@@ -70,6 +70,8 @@ links:
 - `taco init` 명령을 추가한다.
 - 생성 대상:
   - `.context/project/overview.md`
+  - `.context/project/intents/index.md`
+  - `.context/project/intents/I-001-bootstrap.md`
   - `.context/project/plan.md`
   - `.context/project/architecture/index.md`
   - `.context/project/architecture/modules/`

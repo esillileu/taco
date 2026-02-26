@@ -66,6 +66,14 @@ def build_parser() -> argparse.ArgumentParser:
     plan_pack = plan_sub.add_parser("pack")
     plan_pack.add_argument("--task-id", required=True)
     plan_pack.add_argument("--budget-tokens", type=int, default=None)
+    plan_intent = plan_sub.add_parser("intent")
+    plan_intent_sub = plan_intent.add_subparsers(dest="intent_action", required=True)
+    plan_intent_sub.add_parser("list")
+    plan_intent_view = plan_intent_sub.add_parser("view")
+    plan_intent_view.add_argument("--intent-id", required=True)
+    plan_intent_index = plan_intent_sub.add_parser("index")
+    plan_intent_index.add_argument("--intent-id", required=True)
+    plan_intent_index.add_argument("--budget-tokens", type=int, default=None)
     plan_sub.add_parser("view")
     plan_locate = plan_sub.add_parser("locate")
     plan_locate.add_argument("--change-type", required=True)
@@ -83,6 +91,9 @@ def main(argv: list[str] | None = None, cwd: Path | None = None) -> int:
     try:
         root = cwd or Path.cwd()
         action = str(getattr(args, "action", "") or "")
+        if args.domain == "plan" and action == "intent":
+            intent_action = str(getattr(args, "intent_action", "") or "")
+            action = f"intent.{intent_action}"
         tool_name, payload = map_cli_to_tool(args.domain, action, options)
         if tool_name == "project.init":
             response = call_bootstrap_tool(root, tool_name, payload)
@@ -142,6 +153,10 @@ def _to_options(args: argparse.Namespace) -> dict[str, Any]:
         options["change_type"] = args.change_type
     if getattr(args, "target", None) is not None:
         options["target"] = args.target
+    if getattr(args, "intent_id", None) is not None:
+        options["intent_id"] = args.intent_id
+    if getattr(args, "intent_text", None) is not None:
+        options["intent_text"] = args.intent_text
     if getattr(args, "budget_tokens", None) is not None:
         options["budget_tokens"] = args.budget_tokens
     if hasattr(args, "apply"):

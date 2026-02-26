@@ -21,6 +21,7 @@ branches:
 constraints:
   - build mode must execute one task at a time
   - plan mode must produce executable task nodes before handoff
+intent_refs: [I-001]
 links:
   - PLAN-MAIN
   - ARCH-INDEX
@@ -36,6 +37,10 @@ Define how TACO separates document planning from task execution and when the run
 ## Plan Mode
 
 - Goal: update design/plan/task documents safely when decisions or scope changes are required.
+- Entry surface:
+  - `plan.intent.list` to discover active intents
+  - `plan.intent.view` to inspect intent metadata and linked tasks
+  - `plan.intent.index` to load plan-scoped index from intent linkage
 - Output: executable task nodes with explicit references, scope boundaries, and verification criteria.
 - Required checks:
   - front matter integrity and reference validity

@@ -18,4 +18,5 @@ links: [MOD-PARSER, MOD-INDEXER, MOD-PACK, MOD-ROUTER, SCH-TOOL-ERROR]
 
 # Tools Dispatch Module
 
-Central runtime orchestrator for supported tool handlers.
+Central runtime orchestrator for supported tool handlers, including plan-intent handlers
+(`plan.intent.list`, `plan.intent.view`, `plan.intent.index`).

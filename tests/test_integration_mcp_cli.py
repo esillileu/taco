@@ -11,6 +11,7 @@ from taco.tools import call_tool, load_repo_state
 def _write_fixture_repo(root: Path) -> None:
     (root / "docs" / "dev" / "tasks").mkdir(parents=True)
     (root / "docs" / "dev" / "git").mkdir(parents=True)
+    (root / "docs" / "intents").mkdir(parents=True)
 
     (root / "docs" / "intent.md").write_text(
         "\n".join(
@@ -171,6 +172,24 @@ def _write_fixture_repo(root: Path) -> None:
         ),
         encoding="utf-8",
     )
+    (root / "docs" / "intents" / "I-001-plan-mode.md").write_text(
+        "\n".join(
+            [
+                "---",
+                "id: I-001",
+                "type: intent",
+                "title: plan mode intent",
+                "status: active",
+                "plan_ref: PLAN-MAIN",
+                "task_refs: [T-006]",
+                "links: [PLAN-MAIN, T-006, ARCH-INDEX]",
+                "---",
+                "",
+                "# Intent: I-001-plan-mode",
+            ]
+        ),
+        encoding="utf-8",
+    )
 
     config = {
         "docs": {
@@ -212,6 +231,9 @@ def test_integration_happy_path_for_all_tools(tmp_path: Path) -> None:
     assert call_tool(state, "task.list", {})["ok"] is True
     assert call_tool(state, "task.pack", {"task_id": "T-006"})["ok"] is True
     assert call_tool(state, "plan.pack", {"task_id": "T-006"})["ok"] is True
+    assert call_tool(state, "plan.intent.list", {})["ok"] is True
+    assert call_tool(state, "plan.intent.view", {"intent_id": "I-001"})["ok"] is True
+    assert call_tool(state, "plan.intent.index", {"intent_id": "I-001"})["ok"] is True
     assert call_tool(
         state,
         "task.targets",
@@ -242,6 +264,11 @@ def test_integration_happy_path_for_all_tools(tmp_path: Path) -> None:
         state,
         "plan.locate",
         {"change_type": "task", "target": "T-006"},
+    )["ok"] is True
+    assert call_tool(
+        state,
+        "plan.locate",
+        {"change_type": "intent", "target": "I-001"},
     )["ok"] is True
     assert call_tool(state, "plan.validate", {})["ok"] is True
     assert call_tool(
@@ -338,6 +365,26 @@ def test_cli_mapping_parity_with_mcp_calls(tmp_path: Path) -> None:
     cli_result = call_tool(state, tool_name, payload)
     mcp_result = call_tool(state, "plan.pack", {"task_id": "T-006"})
     assert cli_result == mcp_result
+
+    tool_name, payload = map_cli_to_tool("plan", "intent.list", {})
+    cli_result = call_tool(state, tool_name, payload)
+    mcp_result = call_tool(state, "plan.intent.list", {})
+    assert cli_result == mcp_result
+
+    tool_name, payload = map_cli_to_tool(
+        "plan", "intent.view", {"intent_id": "I-001"}
+    )
+    cli_result = call_tool(state, tool_name, payload)
+    mcp_result = call_tool(state, "plan.intent.view", {"intent_id": "I-001"})
+    assert cli_result == mcp_result
+
+    tool_name, payload = map_cli_to_tool(
+        "plan", "intent.index", {"intent_id": "I-001"}
+    )
+    cli_result = call_tool(state, tool_name, payload)
+    mcp_result = call_tool(state, "plan.intent.index", {"intent_id": "I-001"})
+    assert cli_result == mcp_result
+
 
 
 def test_cli_mapping_supports_init_bootstrap_command() -> None:

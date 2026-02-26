@@ -33,6 +33,7 @@ dependency_rules:
   - main -> tools -> core
   - core modules must not depend on CLI transport
 links:
+  - PROJ-INTENT-INDEX
   - MOD-MAIN
   - MOD-CLI-MAPPER
   - MOD-TOOLS-DISPATCH
@@ -88,6 +89,10 @@ Architecture anchor for modules, flows, and schemas. This document is global SSO
 ## Operating Modes
 
 - Plan mode: update architecture/plan/task nodes with validation and impact awareness.
+- Plan mode intent workflow:
+  - discover intents via `plan.intent.list`
+  - inspect intent metadata via `plan.intent.view`
+  - load intent-linked planning index via `plan.intent.index`
 - Plan mode pack policy: use `plan.pack` with default refs `ARCH-INDEX`, `PLAN-MAIN`, `GOV-DOC-INDEX`.
 - Build mode: execute exactly one task using `task.pack` output and record results.
 - Build mode pack policy: use `task.pack` with default ref `GOV-CODE-PRINCIPLES`.
@@ -104,6 +109,9 @@ Architecture anchor for modules, flows, and schemas. This document is global SSO
 - `task.complete`
 - `task.block`
 - `plan.pack`
+- `plan.intent.list`
+- `plan.intent.view`
+- `plan.intent.index`
 - `doc.snippet`
 - `issue.triage`
 - `convention.get`

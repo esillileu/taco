@@ -21,6 +21,7 @@ branches:
   - fail when required references are unresolved
 constraints:
   - include only task-scoped context and required governance
+intent_refs: [I-001]
 links: [MOD-PARSER, MOD-INDEXER, MOD-PACK, SCH-PACK-RESULT]
 ---
 

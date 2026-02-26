@@ -16,6 +16,9 @@ TACO (Task Context Orchestrator) is a local MCP server that builds deterministic
 | `task.complete` | `taco task complete --task-id T-003 --implementation "done" --verification "passed"` |
 | `task.block` | `taco task block --task-id T-003 --reason-code scope_split_required --reason "needs split"` |
 | `plan.pack` | `taco plan pack --task-id T-003 --budget-tokens 1800` |
+| `plan.intent.list` | `taco plan intent list` |
+| `plan.intent.view` | `taco plan intent view --intent-id I-001` |
+| `plan.intent.index` | `taco plan intent index --intent-id I-001 --budget-tokens 1800` |
 | `doc.snippet` | `taco doc snippet --path .context/project/architecture/index.md --anchor-id architecture-index` |
 | `issue.triage` | `taco issue triage --title "fix broken parser"` |
 | `convention.get` | `taco convention get --topic git` |
@@ -25,7 +28,8 @@ TACO (Task Context Orchestrator) is a local MCP server that builds deterministic
 
 ## Mode-Aware Pack Policy
 
-- Use `plan.pack` for plan-mode default context loading.
+- Use `plan.intent.index` for intent-first plan-mode context indexing.
+- Use `plan.pack` when planning from a specific task id directly.
 - Build mode continues to use `task.pack`.
 - Default required refs by mode intent:
   - plan mode: `ARCH-INDEX`, `PLAN-MAIN`, `GOV-DOC-INDEX`
@@ -55,6 +59,8 @@ TACO (Task Context Orchestrator) is a local MCP server that builds deterministic
 ### Canonical Root
 
 - `.context/project/overview.md`
+- `.context/project/intents/index.md`
+- `.context/project/intents/`
 - `.context/project/plan.md`
 - `.context/project/architecture/index.md`
 - `.context/project/architecture/modules/`

@@ -97,6 +97,9 @@ def call_tool(state: RepoState, name: str, args: dict[str, Any]) -> dict[str, An
         "task.list": _task_list,
         "task.pack": _task_pack,
         "plan.pack": _plan_pack,
+        "plan.intent.list": _plan_intent_list,
+        "plan.intent.view": _plan_intent_view,
+        "plan.intent.index": _plan_intent_index,
         "task.targets": _task_targets,
         "task.record": _task_record,
         "task.complete": _task_complete,
@@ -108,6 +111,12 @@ def call_tool(state: RepoState, name: str, args: dict[str, Any]) -> dict[str, An
         "plan.locate": _plan_locate,
         "plan.validate": _plan_validate,
     }
+    if name == "plan.intent.pack":
+        return _error(
+            "deprecated_tool",
+            "plan.intent.pack was replaced by plan.intent.index",
+            {"tool": "plan.intent.pack", "replacement": "plan.intent.index"},
+        )
     handler = handlers.get(name)
     if handler is None:
         return _error("unknown_tool", "tool is not supported", {"tool": name})
@@ -120,6 +129,7 @@ def call_tool(state: RepoState, name: str, args: dict[str, Any]) -> dict[str, An
 
 def _project_init(root: Path, _args: dict[str, Any]) -> dict[str, Any]:
     directories = (
+        ".context/project/intents",
         ".context/project/architecture/modules",
         ".context/project/architecture/flows",
         ".context/project/architecture/schemas",
@@ -169,7 +179,7 @@ def _init_template_files() -> dict[str, str]:
                 '  root: "."',
                 "",
                 "docs:",
-                '  intent: ".context/project/overview.md"',
+                '  intent: ".context/project/intents/index.md"',
                 '  architecture: ".context/project/architecture/index.md"',
                 '  principles: [".context/governance/code-principles.md"]',
                 '  plan: ".context/project/plan.md"',
@@ -177,6 +187,7 @@ def _init_template_files() -> dict[str, str]:
                 '  glossary: ".context/project/architecture/schemas/glossary.md"',
                 '  todo: [".context/project/plan.md"]',
                 '  tasks_glob: ".context/project/tasks/T-*.md"',
+                '  intents_glob: ".context/project/intents/I-*.md"',
                 "",
                 "parsing:",
                 "  task_required_headings:",
@@ -201,6 +212,10 @@ def _init_template_files() -> dict[str, str]:
                 "pack:",
                 "  required_refs_by_tool:",
                 "    plan_pack:",
+                '      - "ARCH-INDEX"',
+                '      - "PLAN-MAIN"',
+                '      - "GOV-DOC-INDEX"',
+                "    plan_intent_index:",
                 '      - "ARCH-INDEX"',
                 '      - "PLAN-MAIN"',
                 '      - "GOV-DOC-INDEX"',
@@ -240,6 +255,47 @@ def _init_template_files() -> dict[str, str]:
                 "",
             ]
         ),
+        ".context/project/intents/index.md": "\n".join(
+            [
+                "---",
+                "id: PROJ-INTENT-INDEX",
+                "type: anchor",
+                "title: Intent Index",
+                "status: active",
+                "links: [PLAN-MAIN, ARCH-INDEX]",
+                "---",
+                "",
+                "# Intent Index",
+                "",
+                "- Store and track plan-level intents under this directory.",
+                "- Link each intent to executable tasks via `task_refs`.",
+                "",
+            ]
+        ),
+        ".context/project/intents/I-001-bootstrap.md": "\n".join(
+            [
+                "---",
+                "id: I-001",
+                "type: intent",
+                "title: Bootstrap Initial Intent",
+                "status: active",
+                "plan_ref: PLAN-MAIN",
+                "task_refs: []",
+                "links: [PROJ-INTENT-INDEX, PLAN-MAIN, ARCH-INDEX]",
+                "---",
+                "",
+                "# Intent: I-001-bootstrap",
+                "",
+                "## Intent",
+                "",
+                "- Capture the first planning goal before creating executable tasks.",
+                "",
+                "## Scope",
+                "",
+                "- Keep intent stable while task decomposition evolves.",
+                "",
+            ]
+        ),
         ".context/project/plan.md": "\n".join(
             [
                 "---",
@@ -249,6 +305,7 @@ def _init_template_files() -> dict[str, str]:
                 "status: active",
                 "phase: phase-bootstrap",
                 "focus: Initialize task-first documentation baseline",
+                "active_intents: []",
                 "active_tasks: []",
                 "blocked_tasks: []",
                 "next_tasks: []",
@@ -263,10 +320,10 @@ def _init_template_files() -> dict[str, str]:
                 "",
                 "## Operational Loop",
                 "",
-                "1. Select one task.",
-                "2. Run `task.pack`.",
-                "3. Implement and verify.",
-                "4. Record outcomes and update plan state.",
+                "1. Select one active intent.",
+                "2. Run `plan.intent.index`.",
+                "3. Refine architecture/plan/task docs.",
+                "4. Hand off to build mode with `task.pack`.",
                 "",
                 "## Active Tasks",
                 "",
@@ -405,6 +462,95 @@ def _task_pack(state: RepoState, args: dict[str, Any]) -> dict[str, Any]:
 def _plan_pack(state: RepoState, args: dict[str, Any]) -> dict[str, Any]:
     task_id = _required_str(args, "task_id")
     return _pack_with_refs(state, args, task_id, "plan.pack")
+
+
+def _plan_intent_list(state: RepoState, _args: dict[str, Any]) -> dict[str, Any]:
+    intents = _collect_arch_nodes(state, "intent")
+    return {"intents": intents, "count": len(intents)}
+
+
+def _plan_intent_view(state: RepoState, args: dict[str, Any]) -> dict[str, Any]:
+    intent_id = _required_str(args, "intent_id")
+    path = state.index.node_index.get(intent_id)
+    if not path:
+        raise ToolError(
+            "intent_not_found",
+            "intent id not found in index",
+            {"intent_id": intent_id},
+        )
+    doc = next((item for item in state.index.documents if item.path == path), None)
+    if doc is None or doc.doc_type != "intent":
+        raise ToolError(
+            "intent_not_found",
+            "intent id is not mapped to an intent document",
+            {"intent_id": intent_id, "path": path},
+        )
+    meta = doc.metadata if isinstance(doc.metadata, dict) else {}
+    task_refs = _collect_string_list(meta.get("task_refs"))
+    return {
+        "intent": {
+            "id": intent_id,
+            "path": path,
+            "title": str(meta.get("title", "")),
+            "status": str(meta.get("status", "")),
+            "plan_ref": str(meta.get("plan_ref", "")),
+            "task_refs": task_refs,
+            "links": _collect_string_list(meta.get("links")),
+        }
+    }
+
+
+def _plan_intent_index(state: RepoState, args: dict[str, Any]) -> dict[str, Any]:
+    intent_id = _required_str(args, "intent_id")
+    path = state.index.node_index.get(intent_id)
+    if not path:
+        raise ToolError(
+            "intent_not_found",
+            "intent id not found in index",
+            {"intent_id": intent_id},
+        )
+    doc = next((item for item in state.index.documents if item.path == path), None)
+    if doc is None or doc.doc_type != "intent":
+        raise ToolError(
+            "intent_not_found",
+            "intent id is not mapped to an intent document",
+            {"intent_id": intent_id, "path": path},
+        )
+    meta = doc.metadata if isinstance(doc.metadata, dict) else {}
+    task_refs = _collect_string_list(meta.get("task_refs"))
+    existing_refs = [
+        task_id for task_id in task_refs if task_id in state.index.task_index
+    ]
+    candidate_tasks = _intent_candidate_tasks(existing_refs, state)
+    coverage = _intent_coverage(existing_refs, state)
+    gaps: list[str] = []
+    if not task_refs:
+        gaps.append("intent.task_refs_missing")
+    if task_refs and not existing_refs:
+        gaps.append("intent.no_existing_task_refs")
+    if existing_refs and not coverage["modules"]:
+        gaps.append("coverage.modules_missing")
+    if existing_refs and not coverage["flows"]:
+        gaps.append("coverage.flows_missing")
+    if existing_refs and not coverage["schemas"]:
+        gaps.append("coverage.schemas_missing")
+    return {
+        "intent": {
+            "id": intent_id,
+            "path": path,
+            "title": str(meta.get("title", "")),
+            "status": str(meta.get("status", "")),
+            "plan_ref": str(meta.get("plan_ref", "")),
+            "task_refs": task_refs,
+            "links": _collect_string_list(meta.get("links")),
+        },
+        "coverage": coverage,
+        "candidate_tasks": candidate_tasks,
+        "gaps": gaps,
+        "required_refs_used": list(
+            state.required_refs_by_tool.get("plan.intent.index", ())
+        ),
+    }
 
 
 def _pack_with_refs(
@@ -731,16 +877,21 @@ def _plan_view(state: RepoState, __args: dict[str, Any]) -> dict[str, Any]:
     next_ids = [
         item for item in plan_meta.get("next_tasks", []) if isinstance(item, str)
     ]
+    active_intents = [
+        item for item in plan_meta.get("active_intents", []) if isinstance(item, str)
+    ]
 
     return {
         "plan": {
             "path": plan_path,
             "phase": plan_meta.get("phase", ""),
             "focus": plan_meta.get("focus", ""),
+            "active_intents": _intent_summaries(active_intents, state.index),
             "active_tasks": _task_summaries(active_ids, state.index),
             "blocked_tasks": _task_summaries(blocked_ids, state.index),
             "next_tasks": _task_summaries(next_ids, state.index),
         },
+        "intents": _collect_arch_nodes(state, "intent"),
         "architecture": {
             "modules": _collect_arch_nodes(state, "module"),
             "flows": _collect_arch_nodes(state, "flow"),
@@ -763,6 +914,8 @@ def _plan_locate(state: RepoState, args: dict[str, Any]) -> dict[str, Any]:
         doc_type = "schema"
     elif change_type == "task":
         doc_type = "task"
+    elif change_type == "intent":
+        doc_type = "intent"
     elif change_type == "plan":
         doc_type = "plan"
     elif change_type == "governance":
@@ -865,6 +1018,114 @@ def _task_summaries(task_ids: list[str], index: IndexGraph) -> list[dict[str, An
     return rows
 
 
+def _intent_summaries(intent_ids: list[str], index: IndexGraph) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for intent_id in intent_ids:
+        path = index.node_index.get(intent_id, "")
+        doc = next((item for item in index.documents if item.path == path), None)
+        if doc is None or doc.doc_type != "intent":
+            rows.append({"intent_id": intent_id, "path": "", "title": "", "status": ""})
+            continue
+        title = ""
+        status = ""
+        if isinstance(doc.metadata, dict):
+            title = str(doc.metadata.get("title", "") or "")
+            status = str(doc.metadata.get("status", "") or "")
+        rows.append(
+            {
+                "intent_id": intent_id,
+                "path": path,
+                "title": title,
+                "status": status,
+            }
+        )
+    return rows
+
+
+def _intent_candidate_tasks(
+    task_ids: list[str], state: RepoState
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for task_id in task_ids:
+        path = state.index.task_index.get(task_id, "")
+        if not path:
+            continue
+        doc = next((item for item in state.index.documents if item.path == path), None)
+        title = ""
+        status = ""
+        if doc and isinstance(doc.metadata, dict):
+            title = str(doc.metadata.get("title", "") or "")
+            status = str(doc.metadata.get("status", "") or "")
+        missing = _task_pack_readiness_missing(state, task_id)
+        rows.append(
+            {
+                "task_id": task_id,
+                "path": path,
+                "title": title,
+                "status": status,
+                "ready_for_build": len(missing) == 0,
+                "missing_requirements": missing,
+            }
+        )
+    return rows
+
+
+def _intent_coverage(
+    task_ids: list[str], state: RepoState
+) -> dict[str, list[dict[str, str]]]:
+    module_ids: list[str] = []
+    flow_ids: list[str] = []
+    schema_ids: list[str] = []
+    for task_id in task_ids:
+        task_path = state.index.task_index.get(task_id)
+        if not task_path:
+            continue
+        doc = next(
+            (item for item in state.index.documents if item.path == task_path),
+            None,
+        )
+        if doc is None or not isinstance(doc.metadata, dict):
+            continue
+        refs = doc.metadata.get("references")
+        if not isinstance(refs, dict):
+            continue
+        for value in _collect_string_list(refs.get("modules")):
+            if value not in module_ids:
+                module_ids.append(value)
+        for value in _collect_string_list(refs.get("flows")):
+            if value not in flow_ids:
+                flow_ids.append(value)
+        for value in _collect_string_list(refs.get("schemas")):
+            if value not in schema_ids:
+                schema_ids.append(value)
+    return {
+        "modules": _summarize_ref_nodes(module_ids, state),
+        "flows": _summarize_ref_nodes(flow_ids, state),
+        "schemas": _summarize_ref_nodes(schema_ids, state),
+    }
+
+
+def _summarize_ref_nodes(ref_ids: list[str], state: RepoState) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    for ref_id in ref_ids:
+        path = state.index.node_index.get(ref_id, "")
+        doc = next((item for item in state.index.documents if item.path == path), None)
+        title = ""
+        doc_type = ""
+        if doc and isinstance(doc.metadata, dict):
+            title = str(doc.metadata.get("title", "") or "")
+            doc_type = doc.doc_type
+        rows.append(
+            {
+                "id": ref_id,
+                "path": path,
+                "title": title,
+                "type": doc_type,
+            }
+        )
+    return rows
+
+
 def _collect_arch_nodes(state: RepoState, doc_type: str) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for doc in state.index.documents:
@@ -880,6 +1141,19 @@ def _collect_arch_nodes(state: RepoState, doc_type: str) -> list[dict[str, Any]]
         )
     rows.sort(key=lambda item: (str(item["path"]), str(item["id"])))
     return rows
+
+
+def _collect_string_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    values: list[str] = []
+    for item in value:
+        if not isinstance(item, str):
+            continue
+        parsed = item.strip()
+        if parsed and parsed not in values:
+            values.append(parsed)
+    return values
 
 
 def _fallback_plan_validation(state: RepoState) -> list[str]:
@@ -983,6 +1257,7 @@ def _load_common_required_refs(raw: dict[str, Any]) -> tuple[str, ...]:
 def _load_required_refs_by_tool(raw: dict[str, Any]) -> dict[str, tuple[str, ...]]:
     defaults: dict[str, tuple[str, ...]] = {
         "plan.pack": ("ARCH-INDEX", "PLAN-MAIN", "GOV-DOC-INDEX"),
+        "plan.intent.index": ("ARCH-INDEX", "PLAN-MAIN", "GOV-DOC-INDEX"),
         "task.pack": ("GOV-CODE-PRINCIPLES",),
     }
     pack = raw.get("pack", {})
@@ -993,9 +1268,14 @@ def _load_required_refs_by_tool(raw: dict[str, Any]) -> dict[str, tuple[str, ...
     if isinstance(by_tool, dict):
         resolved = dict(defaults)
         plan_pack = _read_ref_list(by_tool, ("plan.pack", "plan_pack"))
+        plan_intent_index = _read_ref_list(
+            by_tool, ("plan.intent.index", "plan_intent_index")
+        )
         task_pack = _read_ref_list(by_tool, ("task.pack", "task_pack"))
         if plan_pack:
             resolved["plan.pack"] = plan_pack
+        if plan_intent_index:
+            resolved["plan.intent.index"] = plan_intent_index
         if task_pack:
             resolved["task.pack"] = task_pack
         return resolved
@@ -1004,6 +1284,7 @@ def _load_required_refs_by_tool(raw: dict[str, Any]) -> dict[str, tuple[str, ...
     if legacy:
         return {
             "plan.pack": legacy,
+            "plan.intent.index": legacy,
             "task.pack": legacy,
         }
     return defaults
@@ -1055,22 +1336,42 @@ def _load_task_required_headings(raw: dict[str, Any]) -> tuple[str, ...]:
 
 
 def _ensure_task_readiness_for_pack(state: RepoState, task_id: str) -> None:
-    task_path = state.index.task_index.get(task_id)
-    if not task_path:
+    missing = _task_pack_readiness_missing(state, task_id)
+    if "task_not_found" in missing:
         raise ToolError(
             "task_not_found",
             "task id not found in index",
             {"task_id": task_id},
         )
-    task_doc = next(
-        (doc for doc in state.index.documents if doc.path == task_path), None
-    )
-    if task_doc is None:
+    if "task_doc_missing" in missing:
+        task_path = state.index.task_index.get(task_id, "")
         raise ToolError(
             "task_doc_missing",
             "task document missing from indexed docs",
             {"task_id": task_id, "path": task_path},
         )
+    if missing:
+        deduped = list(dict.fromkeys(missing))  # preserve first-seen ordering
+        raise ToolError(
+            "task_not_ready",
+            "task is not ready for pack execution",
+            {
+                "task_id": task_id,
+                "missing_requirements": ",".join(deduped),
+            },
+        )
+
+
+def _task_pack_readiness_missing(state: RepoState, task_id: str) -> list[str]:
+    task_path = state.index.task_index.get(task_id)
+    if not task_path:
+        return ["task_not_found"]
+    task_doc = next(
+        (doc for doc in state.index.documents if doc.path == task_path),
+        None,
+    )
+    if task_doc is None:
+        return ["task_doc_missing"]
     text = state.index.document_texts.get(task_path, "")
     meta, _ = _split_front_matter(text)
 
@@ -1111,17 +1412,7 @@ def _ensure_task_readiness_for_pack(state: RepoState, task_id: str) -> None:
         and not _has_verification_criteria(task_doc, text)
     ):
         missing.append("verification.criteria")
-
-    if missing:
-        deduped = list(dict.fromkeys(missing))
-        raise ToolError(
-            "task_not_ready",
-            "task is not ready for pack execution",
-            {
-                "task_id": task_id,
-                "missing_requirements": ",".join(deduped),
-            },
-        )
+    return missing
 
 
 def _has_verification_criteria(doc: Any, text: str) -> bool:
@@ -1158,7 +1449,15 @@ def _collect_doc_prefixes(raw: dict[str, Any]) -> tuple[str, ...]:
         return (".context/",)
 
     raw_paths: list[str] = []
-    for key in ("intent", "architecture", "plan", "glossary", "doc_map", "tasks_glob"):
+    for key in (
+        "intent",
+        "architecture",
+        "plan",
+        "glossary",
+        "doc_map",
+        "tasks_glob",
+        "intents_glob",
+    ):
         value = docs.get(key)
         if isinstance(value, str):
             raw_paths.append(value)

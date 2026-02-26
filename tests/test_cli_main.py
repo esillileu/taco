@@ -10,6 +10,7 @@ from taco.main import main
 
 def _write_fixture_repo(root: Path) -> None:
     (root / "docs" / "dev" / "tasks").mkdir(parents=True)
+    (root / "docs" / "intents").mkdir(parents=True)
     (root / "docs" / "dev").mkdir(exist_ok=True)
     (root / "docs" / "intent.md").write_text(
         "\n".join(
@@ -170,6 +171,24 @@ def _write_fixture_repo(root: Path) -> None:
         ),
         encoding="utf-8",
     )
+    (root / "docs" / "intents" / "I-001-plan-mode.md").write_text(
+        "\n".join(
+            [
+                "---",
+                "id: I-001",
+                "type: intent",
+                "title: plan mode intent",
+                "status: active",
+                "plan_ref: PLAN-MAIN",
+                "task_refs: [T-008]",
+                "links: [PLAN-MAIN, T-008, ARCH-INDEX]",
+                "---",
+                "",
+                "# Intent: I-001-plan-mode",
+            ]
+        ),
+        encoding="utf-8",
+    )
     config = {
         "docs": {
             "intent": "docs/intent.md",
@@ -250,6 +269,34 @@ def test_cli_main_plan_pack(tmp_path: Path, capsys) -> None:
     assert output["data"]["task_id"] == "T-008"
 
 
+def test_cli_main_plan_intent_list_view_index(tmp_path: Path, capsys) -> None:
+    _write_fixture_repo(tmp_path)
+
+    code_list = main(["plan", "intent", "list"], cwd=tmp_path)
+    list_output = json.loads(capsys.readouterr().out)
+    assert code_list == 0
+    assert list_output["ok"] is True
+    assert list_output["data"]["count"] == 1
+    assert list_output["data"]["intents"][0]["id"] == "I-001"
+
+    code_view = main(
+        ["plan", "intent", "view", "--intent-id", "I-001"], cwd=tmp_path
+    )
+    view_output = json.loads(capsys.readouterr().out)
+    assert code_view == 0
+    assert view_output["ok"] is True
+    assert view_output["data"]["intent"]["plan_ref"] == "PLAN-MAIN"
+
+    code_index = main(
+        ["plan", "intent", "index", "--intent-id", "I-001"], cwd=tmp_path
+    )
+    index_output = json.loads(capsys.readouterr().out)
+    assert code_index == 0
+    assert index_output["ok"] is True
+    assert index_output["data"]["intent"]["id"] == "I-001"
+    assert index_output["data"]["candidate_tasks"][0]["task_id"] == "T-008"
+
+
 def test_cli_main_returns_error_code_for_invalid_input(tmp_path: Path, capsys) -> None:
     _write_fixture_repo(tmp_path)
     code = main(["task", "pack", "--task-id", ""], cwd=tmp_path)
@@ -290,6 +337,8 @@ def test_cli_main_init_bootstraps_context_and_rejects_rerun(
     assert first_output["ok"] is True
     created_files = first_output["data"]["created_files"]
     assert ".context/project/overview.md" in created_files
+    assert ".context/project/intents/index.md" in created_files
+    assert ".context/project/intents/I-001-bootstrap.md" in created_files
     assert ".context/project/plan.md" in created_files
     assert ".context/project/architecture/index.md" in created_files
     assert ".context/governance/code-principles.md" in created_files
