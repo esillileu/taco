@@ -38,10 +38,12 @@ TACO orchestrates task-first execution by delivering one executable task with on
   - updates architecture/plan/task documents
   - validates references and transition readiness
   - uses `plan.intent.*` for intent-first planning (`list`, `view`, `pack`)
+  - for `kind: refactor`, runs code analysis before design/task finalization
   - uses `plan.pack` when a specific task-level plan pack is needed
 - Build mode:
   - executes one task with bundle-only context
   - records implementation/verification outcomes
+  - when refactor changes architecture boundaries, records design document updates with task closeout
   - uses `task.pack` to load build-scoped default context
 - Mode switching policy is defined in `FLOW-MODE-TRANSITION`.
 
@@ -53,6 +55,9 @@ TACO orchestrates task-first execution by delivering one executable task with on
 - Build intent:
   - optimize for implementation determinism and minimal execution context
   - default pack references must include `GOV-CODE-PRINCIPLES`
+- Refactor intent:
+  - planner must complete code analysis before confirming architecture and task derivation
+  - closeout must include architecture/flow sync when boundaries/ownership changed
 - Git intent in build:
   - git conventions are not always-included pack context
   - before branch/commit/merge actions, agent must call `convention.get(topic=git)`

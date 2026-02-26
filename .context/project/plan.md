@@ -8,12 +8,10 @@ focus: Close feature gaps while enforcing plan/build mode separation and determi
   closeout
 active_intents:
 - I-001
-active_tasks:
-- T-011
+- I-020
+active_tasks: []
 blocked_tasks: []
-next_tasks:
-- T-016
-- T-019
+next_tasks: []
 milestones:
 - M1-front-matter-migration
 - M2-architecture-alignment
@@ -91,6 +89,9 @@ links:
   - `plan.intent.view`
   - `plan.intent.index`
   - intent links to executable tasks via `task_refs`.
+- Add refactor lane policy:
+  - `kind: refactor` must execute code-analysis before design/task finalization.
+  - refactor closeout must include architecture/flow sync when boundaries changed.
 
 ### Phase 5 Task Breakdown
 
@@ -119,11 +120,13 @@ links:
 
 1. Select active intent from plan and inspect with `plan.intent.view`.
 2. Call `plan.intent.index` to gather planning index tied to executable tasks.
-3. Refine architecture/plan/task docs in plan mode.
-4. Switch to build mode and call `task.pack` for the selected task.
-5. Implement and verify against task verification criteria.
-6. Call `task.targets` / `task.record` (or `task.complete`) to record outcomes.
-7. Update plan status, active/next tasks, and intent linkage.
+3. If intent is refactor, run code analysis and confirm design impact before finalizing docs/tasks.
+4. Refine architecture/plan/task docs in plan mode.
+5. Switch to build mode and call `task.pack` for the selected task.
+6. Implement and verify against task verification criteria.
+7. Call `task.targets` / `task.record` (or `task.complete`) to record outcomes.
+8. For refactor impact, sync architecture/flow docs before marking task done.
+9. Update plan status, active/next tasks, and intent linkage.
 
 ## Exit Criteria
 
@@ -134,13 +137,10 @@ links:
 
 ## Active Tasks
 
-- [T-011](./tasks/T-011-feature-precision.md)
 
 ## Active Intents
 
 - [I-001](./intents/I-001-intent-plan-mode.md)
+- [I-020](./intents/I-020-file-size-and-srp-refactor.md)
 
 ## Next Tasks
-
-- [T-016](./tasks/T-016-cli-human-context-view.md)
-- [T-019](./tasks/T-019-intent-automation-apply.md)

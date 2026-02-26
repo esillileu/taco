@@ -2,34 +2,43 @@
 id: T-016
 type: task
 title: T-016-cli-human-context-view
-status: todo
+status: done
 plan_ref: PLAN-MAIN
 priority: p1
 estimate: m
 scope:
   in:
-    - src/taco/main.py
-    - src/taco/cli.py
-    - tests/test_cli_main.py
-    - tests/test_integration_mcp_cli.py
+  - src/taco/main.py
+  - src/taco/cli.py
+  - tests/test_cli_main.py
+  - tests/test_integration_mcp_cli.py
   out:
-    - MCP tool payload/response contract change
-    - task/doc tool semantics change
+  - MCP tool payload/response contract change
+  - task/doc tool semantics change
 references:
-  modules: [MOD-PACK, MOD-INDEXER]
-  flows: [FLOW-TASK-PACK]
-  schemas: [SCH-PACK-RESULT]
-  governance: [GOV-CODE-PRINCIPLES, GOV-GIT-INDEX]
+  modules:
+  - MOD-PACK
+  - MOD-INDEXER
+  flows:
+  - FLOW-TASK-PACK
+  schemas:
+  - SCH-PACK-RESULT
+  governance:
+  - GOV-CODE-PRINCIPLES
+  - GOV-GIT-INDEX
 deliverables:
-  - CLI global option for human-readable context output
-  - renderer branch for `task pack` and `doc snippet` human output
-  - deterministic output ordering and unsupported-command guard
+- CLI global option for human-readable context output
+- renderer branch for `task pack` and `doc snippet` human output
+- deterministic output ordering and unsupported-command guard
 verification:
-  - uv run --extra dev ruff check .
-  - uv run --extra dev mypy .
-  - uv run --extra dev pytest -q
-  - uv run --extra dev python scripts/validate_docs.py
-links: [PLAN-MAIN, ARCH-INDEX, FLOW-TASK-PACK]
+- uv run --extra dev ruff check .
+- uv run --extra dev mypy .
+- uv run --extra dev pytest -q
+- uv run --extra dev python scripts/validate_docs.py
+links:
+- PLAN-MAIN
+- ARCH-INDEX
+- FLOW-TASK-PACK
 ---
 
 # Task: T-016-cli-human-context-view
@@ -99,6 +108,8 @@ links: [PLAN-MAIN, ARCH-INDEX, FLOW-TASK-PACK]
 
 - Pending (do not fill until the task is completed)
 
+- Added global CLI flag --human-context and CLI-only renderer for supported tools. task pack now emits deterministic snippet blocks ([group] path#anchor + content), doc snippet prints heading/target and snippet text, and unsupported commands in human mode return structured invalid_mode errors without changing MCP/tool contracts.
 ## Verification Result
 
 - Pending (do not fill until the task is completed)
+- Added CLI tests for human-context pack/snippet rendering and unsupported-command guard; full validation passed: uv run --extra dev ruff check .; uv run --extra dev mypy .; uv run --extra dev pytest -q; uv run --extra dev python scripts/validate_docs.py.
