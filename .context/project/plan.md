@@ -8,10 +8,9 @@ focus: Close feature gaps while enforcing plan/build mode separation and determi
   closeout
 active_tasks:
 - T-011
-- T-017
-blocked_tasks: []
-next_tasks:
 - T-016
+blocked_tasks: []
+next_tasks: []
 milestones:
 - M1-front-matter-migration
 - M2-architecture-alignment
@@ -127,8 +126,6 @@ links:
 ## Active Tasks
 
 - [T-011](./tasks/T-011-feature-precision.md)
-- [T-017](./tasks/T-017-plan-pack-mode-aware-context.md)
+- [T-016](./tasks/T-016-cli-human-context-view.md)
 
 ## Next Tasks
-
-- [T-016](./tasks/T-016-cli-human-context-view.md)

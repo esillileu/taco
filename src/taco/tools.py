@@ -27,7 +27,7 @@ class RepoState:
     index: IndexGraph
     budget_config: BudgetConfig
     router_config: RouterConfig
-    common_required_refs: tuple[str, ...]
+    required_refs_by_tool: dict[str, tuple[str, ...]]
     task_required_headings: tuple[str, ...] = ()
 
 
@@ -87,7 +87,7 @@ def load_repo_state(root: Path, config_path: Path | None = None) -> RepoState:
         index=index,
         budget_config=budget_config,
         router_config=router_config,
-        common_required_refs=_load_common_required_refs(raw),
+        required_refs_by_tool=_load_required_refs_by_tool(raw),
         task_required_headings=_load_task_required_headings(raw),
     )
 
@@ -96,6 +96,7 @@ def call_tool(state: RepoState, name: str, args: dict[str, Any]) -> dict[str, An
     handlers = {
         "task.list": _task_list,
         "task.pack": _task_pack,
+        "plan.pack": _plan_pack,
         "task.targets": _task_targets,
         "task.record": _task_record,
         "task.complete": _task_complete,
@@ -198,10 +199,13 @@ def _init_template_files() -> dict[str, str]:
                 '    - "glossary.terms"',
                 "",
                 "pack:",
-                "  common_required_refs:",
-                '    - "ARCH-INDEX"',
-                '    - "PLAN-MAIN"',
-                '    - "GOV-CODE-PRINCIPLES"',
+                "  required_refs_by_tool:",
+                "    plan_pack:",
+                '      - "ARCH-INDEX"',
+                '      - "PLAN-MAIN"',
+                '      - "GOV-DOC-INDEX"',
+                "    task_pack:",
+                '      - "GOV-CODE-PRINCIPLES"',
                 "",
                 "modules:",
                 "  git:",
@@ -395,6 +399,20 @@ def _task_list(state: RepoState, _: dict[str, Any]) -> dict[str, Any]:
 def _task_pack(state: RepoState, args: dict[str, Any]) -> dict[str, Any]:
     task_id = _required_str(args, "task_id")
     _ensure_task_readiness_for_pack(state, task_id)
+    return _pack_with_refs(state, args, task_id, "task.pack")
+
+
+def _plan_pack(state: RepoState, args: dict[str, Any]) -> dict[str, Any]:
+    task_id = _required_str(args, "task_id")
+    return _pack_with_refs(state, args, task_id, "plan.pack")
+
+
+def _pack_with_refs(
+    state: RepoState,
+    args: dict[str, Any],
+    task_id: str,
+    tool_name: str,
+) -> dict[str, Any]:
     budget_tokens = args.get("budget_tokens")
     budget_config = state.budget_config
     if budget_tokens is not None:
@@ -413,7 +431,7 @@ def _task_pack(state: RepoState, args: dict[str, Any]) -> dict[str, Any]:
         task_id,
         state.index,
         budget_config,
-        common_required_refs=state.common_required_refs,
+        common_required_refs=state.required_refs_by_tool.get(tool_name, ()),
     )
     return result.to_dict()
 
@@ -960,6 +978,52 @@ def _load_common_required_refs(raw: dict[str, Any]) -> tuple[str, ...]:
         if value and value not in ref_ids:
             ref_ids.append(value)
     return tuple(ref_ids)
+
+
+def _load_required_refs_by_tool(raw: dict[str, Any]) -> dict[str, tuple[str, ...]]:
+    defaults: dict[str, tuple[str, ...]] = {
+        "plan.pack": ("ARCH-INDEX", "PLAN-MAIN", "GOV-DOC-INDEX"),
+        "task.pack": ("GOV-CODE-PRINCIPLES",),
+    }
+    pack = raw.get("pack", {})
+    if not isinstance(pack, dict):
+        return defaults
+
+    by_tool = pack.get("required_refs_by_tool")
+    if isinstance(by_tool, dict):
+        resolved = dict(defaults)
+        plan_pack = _read_ref_list(by_tool, ("plan.pack", "plan_pack"))
+        task_pack = _read_ref_list(by_tool, ("task.pack", "task_pack"))
+        if plan_pack:
+            resolved["plan.pack"] = plan_pack
+        if task_pack:
+            resolved["task.pack"] = task_pack
+        return resolved
+
+    legacy = _load_common_required_refs(raw)
+    if legacy:
+        return {
+            "plan.pack": legacy,
+            "task.pack": legacy,
+        }
+    return defaults
+
+
+def _read_ref_list(raw: dict[str, Any], keys: tuple[str, ...]) -> tuple[str, ...]:
+    for key in keys:
+        value = raw.get(key)
+        if not isinstance(value, list):
+            continue
+        refs: list[str] = []
+        for item in value:
+            if not isinstance(item, str):
+                continue
+            ref_id = item.strip()
+            if ref_id and ref_id not in refs:
+                refs.append(ref_id)
+        if refs:
+            return tuple(refs)
+    return ()
 
 
 def _load_task_required_headings(raw: dict[str, Any]) -> tuple[str, ...]:

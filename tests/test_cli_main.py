@@ -103,6 +103,22 @@ def _write_fixture_repo(root: Path) -> None:
         ),
         encoding="utf-8",
     )
+    (root / "docs" / "dev" / "doc-index.md").write_text(
+        "\n".join(
+            [
+                "---",
+                "id: GOV-DOC-INDEX",
+                "type: governance",
+                "title: Doc Guide",
+                "status: active",
+                "links: []",
+                "---",
+                "",
+                "# Doc Guide",
+            ]
+        ),
+        encoding="utf-8",
+    )
     (root / "docs" / "dev" / "todo.md").write_text("# Todo\n", encoding="utf-8")
     (root / "docs" / "dev" / "git.md").write_text("# Git Rules\n", encoding="utf-8")
     (root / "docs" / "dev" / "tasks" / "T-008-cli-entrypoint.md").write_text(
@@ -159,6 +175,7 @@ def _write_fixture_repo(root: Path) -> None:
             "intent": "docs/intent.md",
             "architecture": "docs/architecture.md",
             "plan": "docs/plan.md",
+            "doc_map": "docs/dev/doc-index.md",
             "glossary": "docs/glossary.md",
             "principles": ["docs/dev/principles.md"],
             "todo": ["docs/dev/todo.md"],
@@ -222,6 +239,15 @@ def test_cli_main_plan_view(tmp_path: Path, capsys) -> None:
     assert code == 0
     assert output["ok"] is True
     assert "plan" in output["data"]
+
+
+def test_cli_main_plan_pack(tmp_path: Path, capsys) -> None:
+    _write_fixture_repo(tmp_path)
+    code = main(["plan", "pack", "--task-id", "T-008"], cwd=tmp_path)
+    output = json.loads(capsys.readouterr().out)
+    assert code == 0
+    assert output["ok"] is True
+    assert output["data"]["task_id"] == "T-008"
 
 
 def test_cli_main_returns_error_code_for_invalid_input(tmp_path: Path, capsys) -> None:

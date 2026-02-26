@@ -15,6 +15,7 @@ TACO (Task Context Orchestrator) is a local MCP server that builds deterministic
 | `task.record` | `taco task record --task-id T-003 --route-type implementation_result --content "done"` |
 | `task.complete` | `taco task complete --task-id T-003 --implementation "done" --verification "passed"` |
 | `task.block` | `taco task block --task-id T-003 --reason-code scope_split_required --reason "needs split"` |
+| `plan.pack` | `taco plan pack --task-id T-003 --budget-tokens 1800` |
 | `doc.snippet` | `taco doc snippet --path .context/project/architecture/index.md --anchor-id architecture-index` |
 | `issue.triage` | `taco issue triage --title "fix broken parser"` |
 | `convention.get` | `taco convention get --topic git` |
@@ -24,7 +25,7 @@ TACO (Task Context Orchestrator) is a local MCP server that builds deterministic
 
 ## Mode-Aware Pack Policy
 
-- Planned tool addition: `plan.pack` for plan-mode default context loading.
+- Use `plan.pack` for plan-mode default context loading.
 - Build mode continues to use `task.pack`.
 - Default required refs by mode intent:
   - plan mode: `ARCH-INDEX`, `PLAN-MAIN`, `GOV-DOC-INDEX`

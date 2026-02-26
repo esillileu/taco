@@ -2,42 +2,58 @@
 id: T-017
 type: task
 title: T-017-plan-pack-mode-aware-context
-status: active
+status: done
 plan_ref: PLAN-MAIN
 priority: p1
 estimate: m
 scope:
   in:
-    - src/taco/main.py
-    - src/taco/cli.py
-    - src/taco/tools.py
-    - src/taco/pack.py
-    - taco.yaml
-    - tests/test_cli_main.py
-    - tests/test_tools.py
-    - tests/test_integration_mcp_cli.py
-    - README.md
-    - .context/project/overview.md
-    - .context/project/plan.md
-    - .context/project/architecture/index.md
+  - src/taco/main.py
+  - src/taco/cli.py
+  - src/taco/tools.py
+  - src/taco/pack.py
+  - taco.yaml
+  - tests/test_cli_main.py
+  - tests/test_tools.py
+  - tests/test_integration_mcp_cli.py
+  - README.md
+  - .context/project/overview.md
+  - .context/project/plan.md
+  - .context/project/architecture/index.md
   out:
-    - build-mode execution semantics change
-    - git automation implementation
+  - build-mode execution semantics change
+  - git automation implementation
 references:
-  modules: [MOD-MAIN, MOD-CLI-MAPPER, MOD-TOOLS-DISPATCH, MOD-PACK]
-  flows: [FLOW-MODE-TRANSITION, FLOW-TASK-PACK, FLOW-TOOL-DISPATCH]
-  schemas: [SCH-PACK-RESULT, SCH-TOOL-ENVELOPE, SCH-TOOL-ERROR]
-  governance: [GOV-CODE-PRINCIPLES, GOV-DOC-INDEX, GOV-GIT-INDEX]
+  modules:
+  - MOD-MAIN
+  - MOD-CLI-MAPPER
+  - MOD-TOOLS-DISPATCH
+  - MOD-PACK
+  flows:
+  - FLOW-MODE-TRANSITION
+  - FLOW-TASK-PACK
+  - FLOW-TOOL-DISPATCH
+  schemas:
+  - SCH-PACK-RESULT
+  - SCH-TOOL-ENVELOPE
+  - SCH-TOOL-ERROR
+  governance:
+  - GOV-CODE-PRINCIPLES
+  - GOV-DOC-INDEX
+  - GOV-GIT-INDEX
 deliverables:
-  - "`plan.pack` tool surface and CLI mapping"
-  - "mode-intent-based required refs policy in config/runtime"
-  - "build git convention on-demand workflow documentation"
+- '`plan.pack` tool surface and CLI mapping'
+- mode-intent-based required refs policy in config/runtime
+- build git convention on-demand workflow documentation
 verification:
-  - uv run --extra dev ruff check .
-  - uv run --extra dev mypy .
-  - uv run --extra dev pytest -q
-  - uv run --extra dev python scripts/validate_docs.py
-links: [PLAN-MAIN, ARCH-INDEX, FLOW-MODE-TRANSITION]
+- uv run --extra dev ruff check .
+- uv run --extra dev mypy .
+- uv run --extra dev pytest -q
+- uv run --extra dev python scripts/validate_docs.py
+links:
+- PLAN-MAIN
+- ARCH-INDEX
+- FLOW-MODE-TRANSITION
 ---
 
 # Task: T-017-plan-pack-mode-aware-context
@@ -93,8 +109,7 @@ links: [PLAN-MAIN, ARCH-INDEX, FLOW-MODE-TRANSITION]
 
 ## Implementation Result
 
-- Pending (do not fill until the task is completed)
-
+- Implemented mode-aware pack flow with new plan.pack CLI/MCP surface, tool-specific required refs policy, and backward-compatible fallback from pack.required_refs_by_tool to legacy pack.common_required_refs.
 ## Verification Result
 
-- Pending (do not fill until the task is completed)
+- Validated with plan.pack/task.pack executions plus full ruff, mypy, pytest, and validate_docs passes; updated docs and tests for interface and policy coverage.

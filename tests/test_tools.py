@@ -104,6 +104,22 @@ def _state(tmp_path: Path) -> RepoState:
                 ]
             ),
         ),
+        DocumentInput.from_text(
+            "docs/dev/doc-index.md",
+            "\n".join(
+                [
+                    "---",
+                    "id: GOV-DOC-INDEX",
+                    "type: governance",
+                    "title: Doc Guide",
+                    "status: active",
+                    "links: []",
+                    "---",
+                    "",
+                    "# Doc Guide",
+                ]
+            ),
+        ),
         DocumentInput.from_text("docs/dev/todo.md", "# Todo\n"),
         DocumentInput.from_text(
             "docs/dev/tasks/T-005-mcp-tools.md",
@@ -170,7 +186,7 @@ def _state(tmp_path: Path) -> RepoState:
     return RepoState(
         root=tmp_path,
         config_raw={
-            "docs": {"plan": "docs/plan.md"},
+            "docs": {"plan": "docs/plan.md", "doc_map": "docs/dev/doc-index.md"},
             "modules": {"git": {"path": "docs/dev/git.md"}},
         },
         index=index,
@@ -192,7 +208,10 @@ def _state(tmp_path: Path) -> RepoState:
             ),
         ),
         router_config=RouterConfig.default(),
-        common_required_refs=(),
+        required_refs_by_tool={
+            "plan.pack": ("ARCH-INDEX", "PLAN-MAIN", "GOV-DOC-INDEX"),
+            "task.pack": ("GOV-CODE-PRINCIPLES",),
+        },
     )
 
 
@@ -212,6 +231,9 @@ def test_task_list_and_pack_and_targets(tmp_path: Path) -> None:
     packed = call_tool(state, "task.pack", {"task_id": "T-005"})
     assert packed["ok"] is True
     assert packed["data"]["task_id"] == "T-005"
+    plan_packed = call_tool(state, "plan.pack", {"task_id": "T-005"})
+    assert plan_packed["ok"] is True
+    assert plan_packed["data"]["task_id"] == "T-005"
 
     target = call_tool(
         state,
@@ -286,6 +308,22 @@ def test_task_pack_fails_when_readiness_requirements_missing(tmp_path: Path) -> 
     (tmp_path / "docs" / "dev" / "principles.md").write_text(
         "# Principles\n", encoding="utf-8"
     )
+    (tmp_path / "docs" / "dev" / "doc-index.md").write_text(
+        "\n".join(
+            [
+                "---",
+                "id: GOV-DOC-INDEX",
+                "type: governance",
+                "title: Doc Guide",
+                "status: active",
+                "links: []",
+                "---",
+                "",
+                "# Doc Guide",
+            ]
+        ),
+        encoding="utf-8",
+    )
     (tmp_path / "docs" / "dev" / "todo.md").write_text("# Todo\n", encoding="utf-8")
     (tmp_path / "docs" / "dev" / "tasks" / "T-099-not-ready.md").write_text(
         "\n".join(
@@ -329,6 +367,7 @@ def test_task_pack_fails_when_readiness_requirements_missing(tmp_path: Path) -> 
             "intent": "docs/intent.md",
             "architecture": "docs/architecture.md",
             "plan": "docs/plan.md",
+            "doc_map": "docs/dev/doc-index.md",
             "glossary": "docs/glossary.md",
             "principles": ["docs/dev/principles.md"],
             "todo": ["docs/dev/todo.md"],
@@ -352,6 +391,12 @@ def test_task_pack_fails_when_readiness_requirements_missing(tmp_path: Path) -> 
             ],
         },
         "modules": {"git": {"path": "docs/dev/git.md"}},
+        "pack": {
+            "required_refs_by_tool": {
+                "plan_pack": ["ARCH-INDEX", "PLAN-MAIN", "GOV-DOC-INDEX"],
+                "task_pack": ["GOV-CODE-PRINCIPLES"],
+            }
+        },
     }
     (tmp_path / "taco.yaml").write_text(yaml.safe_dump(config), encoding="utf-8")
 
@@ -415,6 +460,12 @@ def test_load_repo_state_from_config(tmp_path: Path) -> None:
 
     state = load_repo_state(tmp_path)
     assert state.budget_config.default_tokens == 50
+    assert state.required_refs_by_tool["plan.pack"] == (
+        "ARCH-INDEX",
+        "PLAN-MAIN",
+        "GOV-DOC-INDEX",
+    )
+    assert state.required_refs_by_tool["task.pack"] == ("GOV-CODE-PRINCIPLES",)
 
 
 def test_project_init_bootstrap_generates_minimal_context(tmp_path: Path) -> None:

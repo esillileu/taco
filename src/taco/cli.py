@@ -95,6 +95,18 @@ def map_cli_to_tool(
         return "convention.get", {"topic": _required_str(options, "topic")}
     if domain == "plan" and action == "view":
         return "plan.view", {}
+    if domain == "plan" and action == "pack":
+        payload = {"task_id": _required_str(options, "task_id")}
+        budget_tokens = options.get("budget_tokens")
+        if budget_tokens is not None:
+            if not isinstance(budget_tokens, int):
+                raise CliError(
+                    "invalid_option",
+                    "budget_tokens must be an integer",
+                    {"key": "budget_tokens"},
+                )
+            payload["budget_tokens"] = budget_tokens
+        return "plan.pack", payload
     if domain == "plan" and action == "locate":
         locate_payload: dict[str, Any] = {
             "change_type": _required_str(options, "change_type"),

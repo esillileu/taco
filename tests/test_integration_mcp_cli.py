@@ -104,6 +104,22 @@ def _write_fixture_repo(root: Path) -> None:
         ),
         encoding="utf-8",
     )
+    (root / "docs" / "dev" / "doc-index.md").write_text(
+        "\n".join(
+            [
+                "---",
+                "id: GOV-DOC-INDEX",
+                "type: governance",
+                "title: Doc Guide",
+                "status: active",
+                "links: []",
+                "---",
+                "",
+                "# Doc Guide",
+            ]
+        ),
+        encoding="utf-8",
+    )
     (root / "docs" / "dev" / "todo.md").write_text("# Todo\n", encoding="utf-8")
     (root / "docs" / "dev" / "git.md").write_text("# Git Rules\n", encoding="utf-8")
     (root / "docs" / "dev" / "tasks" / "T-006-integration-tests.md").write_text(
@@ -161,6 +177,7 @@ def _write_fixture_repo(root: Path) -> None:
             "intent": "docs/intent.md",
             "architecture": "docs/architecture.md",
             "plan": "docs/plan.md",
+            "doc_map": "docs/dev/doc-index.md",
             "glossary": "docs/glossary.md",
             "principles": ["docs/dev/principles.md"],
             "todo": ["docs/dev/todo.md"],
@@ -194,6 +211,7 @@ def test_integration_happy_path_for_all_tools(tmp_path: Path) -> None:
 
     assert call_tool(state, "task.list", {})["ok"] is True
     assert call_tool(state, "task.pack", {"task_id": "T-006"})["ok"] is True
+    assert call_tool(state, "plan.pack", {"task_id": "T-006"})["ok"] is True
     assert call_tool(
         state,
         "task.targets",
@@ -314,6 +332,11 @@ def test_cli_mapping_parity_with_mcp_calls(tmp_path: Path) -> None:
     tool_name, payload = map_cli_to_tool("plan", "view", {})
     cli_result = call_tool(state, tool_name, payload)
     mcp_result = call_tool(state, "plan.view", {})
+    assert cli_result == mcp_result
+
+    tool_name, payload = map_cli_to_tool("plan", "pack", {"task_id": "T-006"})
+    cli_result = call_tool(state, tool_name, payload)
+    mcp_result = call_tool(state, "plan.pack", {"task_id": "T-006"})
     assert cli_result == mcp_result
 
 
