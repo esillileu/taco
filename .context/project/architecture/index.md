@@ -88,7 +88,11 @@ Architecture anchor for modules, flows, and schemas. This document is global SSO
 ## Operating Modes
 
 - Plan mode: update architecture/plan/task nodes with validation and impact awareness.
+- Plan mode pack policy: use `plan.pack` with default refs `ARCH-INDEX`, `PLAN-MAIN`, `GOV-DOC-INDEX`.
 - Build mode: execute exactly one task using `task.pack` output and record results.
+- Build mode pack policy: use `task.pack` with default ref `GOV-CODE-PRINCIPLES`.
+- Pack config compatibility: prefer `pack.required_refs_by_tool` and fallback to `pack.common_required_refs`.
+- Build git policy: fetch git conventions on demand via `convention.get` before git actions.
 - Mode switches follow `FLOW-MODE-TRANSITION` and must be explicit.
 
 ## Interface Surface
@@ -99,6 +103,7 @@ Architecture anchor for modules, flows, and schemas. This document is global SSO
 - `task.record`
 - `task.complete`
 - `task.block`
+- `plan.pack`
 - `doc.snippet`
 - `issue.triage`
 - `convention.get`

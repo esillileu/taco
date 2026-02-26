@@ -36,10 +36,25 @@ TACO orchestrates task-first execution by delivering one executable task with on
 - Plan mode:
   - updates architecture/plan/task documents
   - validates references and transition readiness
+  - uses `plan.pack` to load plan-scoped default context
 - Build mode:
   - executes one task with bundle-only context
   - records implementation/verification outcomes
+  - uses `task.pack` to load build-scoped default context
 - Mode switching policy is defined in `FLOW-MODE-TRANSITION`.
+
+## Intent Policy
+
+- Plan intent:
+  - optimize for design safety and document consistency
+  - default pack references must include `ARCH-INDEX`, `PLAN-MAIN`, `GOV-DOC-INDEX`
+- Build intent:
+  - optimize for implementation determinism and minimal execution context
+  - default pack references must include `GOV-CODE-PRINCIPLES`
+- Git intent in build:
+  - git conventions are not always-included pack context
+  - before branch/commit/merge actions, agent must call `convention.get(topic=git)`
+  - when needed, agent should follow with `doc.snippet` on the returned git rule path
 
 ## Quality Bar
 

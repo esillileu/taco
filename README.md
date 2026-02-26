@@ -22,6 +22,21 @@ TACO (Task Context Orchestrator) is a local MCP server that builds deterministic
 | `plan.locate` | `taco plan locate --change-type task --target T-014` |
 | `plan.validate` | `taco plan validate` |
 
+## Mode-Aware Pack Policy
+
+- Planned tool addition: `plan.pack` for plan-mode default context loading.
+- Build mode continues to use `task.pack`.
+- Default required refs by mode intent:
+  - plan mode: `ARCH-INDEX`, `PLAN-MAIN`, `GOV-DOC-INDEX`
+  - build mode: `GOV-CODE-PRINCIPLES`
+- Config compatibility policy:
+  - prefer `pack.required_refs_by_tool` for mode-aware defaults
+  - fallback to legacy `pack.common_required_refs` for backward compatibility
+- Build git rule policy:
+  - do not always include git conventions in build packs
+  - before branch/commit/merge actions, call `convention.get --topic git`
+  - optionally call `doc.snippet` for specific git rule anchors
+
 ## Delivery Strategy
 
 - Near term: ship Python implementation first for rapid iteration.

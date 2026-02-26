@@ -8,9 +8,10 @@ focus: Close feature gaps while enforcing plan/build mode separation and determi
   closeout
 active_tasks:
 - T-011
-- T-016
+- T-017
 blocked_tasks: []
-next_tasks: []
+next_tasks:
+- T-016
 milestones:
 - M1-front-matter-migration
 - M2-architecture-alignment
@@ -75,6 +76,13 @@ links:
 - Require explicit transition checks before entering build mode.
 - Require build-to-plan fallback on boundary/scope/verification ambiguity.
 - Keep mode transition policy consistent with architecture flow docs.
+- Split pack defaults by mode intent:
+  - `plan.pack` defaults: `ARCH-INDEX`, `PLAN-MAIN`, `GOV-DOC-INDEX`
+  - `task.pack` defaults: `GOV-CODE-PRINCIPLES`
+- Keep config migration backward compatible:
+  - prefer `pack.required_refs_by_tool`
+  - fallback to legacy `pack.common_required_refs`
+- Keep build git rules on-demand by behavior (`convention.get` -> optional `doc.snippet`).
 
 ### Phase 5 Task Breakdown
 
@@ -103,7 +111,7 @@ links:
 
 1. Select active task from plan.
 2. Validate plan->build readiness for selected task.
-3. Call `task.pack`.
+3. Call `plan.pack` for planning context or `task.pack` for build execution context.
 4. Implement and verify against task verification criteria.
 5. Call `task.targets` / `task.record` (or `task.complete`) to record outcomes.
 6. If boundary or scope changes are required, switch back to plan mode.
@@ -119,6 +127,8 @@ links:
 ## Active Tasks
 
 - [T-011](./tasks/T-011-feature-precision.md)
-- [T-016](./tasks/T-016-cli-human-context-view.md)
+- [T-017](./tasks/T-017-plan-pack-mode-aware-context.md)
 
 ## Next Tasks
+
+- [T-016](./tasks/T-016-cli-human-context-view.md)

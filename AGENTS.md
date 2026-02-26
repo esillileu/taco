@@ -10,6 +10,7 @@
 
 - Prefer dry-run record flow first.
 - Record implementation and verification outcomes in task documents.
+- Before branch/commit/merge actions in build work, call `uv run taco convention get --topic git` and use `uv run taco doc snippet ...` as needed for rule details.
 
 ## Task branch workflow
 
