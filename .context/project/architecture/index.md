@@ -93,12 +93,14 @@ Architecture anchor for modules, flows, and schemas. This document is global SSO
   - discover intents via `plan.intent.list`
   - inspect intent metadata via `plan.intent.view`
   - load intent-linked planning index via `plan.intent.index`
+  - if `intent.kind == refactor`, run code analysis before architecture/task finalization
 - Plan mode pack policy: use `plan.pack` with default refs `ARCH-INDEX`, `PLAN-MAIN`, `GOV-DOC-INDEX`.
 - Build mode: execute exactly one task using `task.pack` output and record results.
 - Build mode pack policy: use `task.pack` with default ref `GOV-CODE-PRINCIPLES`.
 - Pack config compatibility: prefer `pack.required_refs_by_tool` and fallback to `pack.common_required_refs`.
 - Build git policy: fetch git conventions on demand via `convention.get` before git actions.
 - Mode switches follow `FLOW-MODE-TRANSITION` and must be explicit.
+- Refactor lane requires design-sync verification when build changes architecture boundaries.
 
 ## Interface Surface
 

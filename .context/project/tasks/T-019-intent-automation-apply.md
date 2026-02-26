@@ -2,40 +2,54 @@
 id: T-019
 type: task
 title: T-019-intent-automation-apply
-status: active
+status: done
 plan_ref: PLAN-MAIN
 priority: p0
 estimate: l
 scope:
   in:
-    - src/taco/main.py
-    - src/taco/cli.py
-    - src/taco/tools.py
-    - scripts/validate_docs.py
-    - README.md
-    - .context/project/architecture/index.md
-    - .context/project/architecture/modules/tools-dispatch.md
-    - tests/test_cli_main.py
-    - tests/test_tools.py
-    - tests/test_integration_mcp_cli.py
+  - src/taco/main.py
+  - src/taco/cli.py
+  - src/taco/tools.py
+  - scripts/validate_docs.py
+  - README.md
+  - .context/project/architecture/index.md
+  - .context/project/architecture/modules/tools-dispatch.md
+  - tests/test_cli_main.py
+  - tests/test_tools.py
+  - tests/test_integration_mcp_cli.py
   out:
-    - build mode execution semantics change
-    - legacy task/doc tool behavior changes
+  - build mode execution semantics change
+  - legacy task/doc tool behavior changes
 references:
-  modules: [MOD-MAIN, MOD-CLI-MAPPER, MOD-TOOLS-DISPATCH, MOD-PACK]
-  flows: [FLOW-MODE-TRANSITION, FLOW-TOOL-DISPATCH]
-  schemas: [SCH-TOOL-ENVELOPE, SCH-TOOL-ERROR, SCH-INDEX-GRAPH]
-  governance: [GOV-CODE-PRINCIPLES, GOV-DOC-INDEX]
+  modules:
+  - MOD-MAIN
+  - MOD-CLI-MAPPER
+  - MOD-TOOLS-DISPATCH
+  - MOD-PACK
+  flows:
+  - FLOW-MODE-TRANSITION
+  - FLOW-TOOL-DISPATCH
+  schemas:
+  - SCH-TOOL-ENVELOPE
+  - SCH-TOOL-ERROR
+  - SCH-INDEX-GRAPH
+  governance:
+  - GOV-CODE-PRINCIPLES
+  - GOV-DOC-INDEX
 deliverables:
-  - plan intent automation tools (`propose`, `autodesign`, `generate_tasks`, `review_bundle`)
-  - one-shot retry on fail for review bundle (`retry_on_fail=1`)
-  - approval-gated apply flow with fingerprint check (`plan.intent.apply`)
+- plan intent automation tools (`propose`, `autodesign`, `generate_tasks`, `review_bundle`)
+- one-shot retry on fail for review bundle (`retry_on_fail=1`)
+- approval-gated apply flow with fingerprint check (`plan.intent.apply`)
 verification:
-  - uv run --extra dev ruff check .
-  - uv run --extra dev mypy .
-  - uv run --extra dev pytest -q
-  - uv run --extra dev python scripts/validate_docs.py
-links: [PLAN-MAIN, ARCH-INDEX, I-001]
+- uv run --extra dev ruff check .
+- uv run --extra dev mypy .
+- uv run --extra dev pytest -q
+- uv run --extra dev python scripts/validate_docs.py
+links:
+- PLAN-MAIN
+- ARCH-INDEX
+- I-001
 ---
 
 # Task: T-019-intent-automation-apply
@@ -87,6 +101,8 @@ links: [PLAN-MAIN, ARCH-INDEX, I-001]
 
 - Pending (do not fill until the task is completed)
 
+- Implemented plan-intent automation end-to-end: propose/autodesign/generate_tasks/review_bundle/apply, including retry-on-fail, fingerprint gate, generated task apply, intent/plan linkage updates, and review record output.
 ## Verification Result
 
 - Pending (do not fill until the task is completed)
+- Validated automation behavior and contracts via ruff, mypy, pytest, and docs validation (uv run --extra dev ruff check .; uv run --extra dev mypy .; uv run --extra dev pytest -q; uv run --extra dev python scripts/validate_docs.py).

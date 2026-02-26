@@ -455,3 +455,61 @@ def test_task_block_rejects_invalid_reason_code_and_done_status(tmp_path: Path) 
     )
     assert blocked_after_done["ok"] is False
     assert blocked_after_done["error"]["code"] == "task_state_conflict"
+
+
+def test_task_complete_requires_design_sync_for_refactor_major(tmp_path: Path) -> None:
+    _write_context_repo(tmp_path)
+    _write(
+        tmp_path,
+        ".context/project/intents/I-020-refactor.md",
+        "\n".join(
+            [
+                "---",
+                "id: I-020",
+                "type: intent",
+                "title: refactor lane",
+                "status: active",
+                "kind: refactor",
+                "design_impact: major",
+                "plan_ref: PLAN-MAIN",
+                "task_refs: [T-010]",
+                "links: [PLAN-MAIN, ARCH-INDEX, T-010]",
+                "---",
+                "",
+                "# Intent: I-020-refactor",
+                "",
+            ]
+        ),
+    )
+    state = load_repo_state(tmp_path)
+
+    missing = call_tool(
+        state,
+        "task.complete",
+        {
+            "task_id": "T-010",
+            "implementation": "split modules",
+            "verification": "unit tests passed",
+            "dry_run": True,
+        },
+    )
+    assert missing["ok"] is False
+    assert missing["error"]["code"] == "design_sync_required"
+
+    ok = call_tool(
+        state,
+        "task.complete",
+        {
+            "task_id": "T-010",
+            "implementation": "design-sync: updated FLOW-MODE-TRANSITION",
+            "verification": (
+                "design-sync: updated "
+                ".context/project/architecture/index.md"
+            ),
+            "dry_run": True,
+        },
+    )
+    assert ok["ok"] is True
+    assert ok["data"]["design_sync_required_for"] == [
+        {"intent_id": "I-020", "design_impact": "major"}
+    ]

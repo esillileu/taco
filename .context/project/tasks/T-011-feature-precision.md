@@ -2,25 +2,31 @@
 id: T-011
 type: task
 title: T-011-feature-precision
-status: active
+status: done
 plan_ref: PLAN-MAIN
 priority: p1
 estimate: m
 scope:
   in:
-    - src/taco/pack.py
-    - src/taco/tools.py
-    - .context/project/architecture/index.md
+  - src/taco/pack.py
+  - src/taco/tools.py
+  - .context/project/architecture/index.md
   out:
-    - major tool surface rename
+  - major tool surface rename
 references:
-  modules: [MOD-PACK, MOD-TOOLS-DISPATCH]
-  flows: [FLOW-TASK-PACK]
-  schemas: [SCH-PACK-RESULT]
-  governance: [GOV-CODE-PRINCIPLES]
+  modules:
+  - MOD-PACK
+  - MOD-TOOLS-DISPATCH
+  flows:
+  - FLOW-TASK-PACK
+  schemas:
+  - SCH-PACK-RESULT
+  governance:
+  - GOV-CODE-PRINCIPLES
 deliverables: []
 verification: []
-links: [PLAN-MAIN]
+links:
+- PLAN-MAIN
 ---
 
 # Task: T-011-feature-precision
@@ -73,7 +79,9 @@ links: [PLAN-MAIN]
 - Pending (do not fill until the task is completed)
 - Updated Phase 5 from placeholders to executable tasks (T-012~T-014) and linked mode-transition flow into plan/architecture/overview
 
+- Feature matrix gap fixes applied across pack/record/complete flows; mode-transition and plan links aligned.
 ## Verification Result
 
 - Pending (do not fill until the task is completed)
 - Dogfooding run succeeded for task.list/task.pack(T-012)/task.targets/doc.snippet/issue.triage/convention.get/task.complete(dry-run)
+- Dogfooding scenarios passed for task.pack/task.targets/task.record/task.complete/doc.snippet/issue.triage/convention.get; validation and test suite passed.
