@@ -297,6 +297,86 @@ def test_cli_main_plan_intent_list_view_index(tmp_path: Path, capsys) -> None:
     assert index_output["data"]["candidate_tasks"][0]["task_id"] == "T-008"
 
 
+def test_cli_main_plan_intent_automation_tools(tmp_path: Path, capsys) -> None:
+    _write_fixture_repo(tmp_path)
+
+    code_propose = main(
+        [
+            "plan",
+            "intent",
+            "propose",
+            "--intent-id",
+            "I-010",
+            "--intent-text",
+            "improve planning automation with deterministic task generation",
+        ],
+        cwd=tmp_path,
+    )
+    propose_output = json.loads(capsys.readouterr().out)
+    assert code_propose == 0
+    assert propose_output["ok"] is True
+    assert propose_output["data"]["intent"]["id"] == "I-010"
+
+    code_design = main(
+        ["plan", "intent", "autodesign", "--intent-id", "I-001"], cwd=tmp_path
+    )
+    design_output = json.loads(capsys.readouterr().out)
+    assert code_design == 0
+    assert design_output["ok"] is True
+    assert "quality_gate" in design_output["data"]
+
+    code_tasks = main(
+        ["plan", "intent", "generate-tasks", "--intent-id", "I-001"], cwd=tmp_path
+    )
+    tasks_output = json.loads(capsys.readouterr().out)
+    assert code_tasks == 0
+    assert tasks_output["ok"] is True
+    assert "quality_gate" in tasks_output["data"]
+
+    code_bundle = main(
+        ["plan", "intent", "review-bundle", "--intent-id", "I-001"], cwd=tmp_path
+    )
+    bundle_output = json.loads(capsys.readouterr().out)
+    assert code_bundle == 0
+    assert bundle_output["ok"] is True
+    assert bundle_output["data"]["quality_gate"]["approval_required"] is True
+
+    code_bundle_retry = main(
+        [
+            "plan",
+            "intent",
+            "review-bundle",
+            "--intent-id",
+            "I-001",
+            "--retry-on-fail",
+            "1",
+        ],
+        cwd=tmp_path,
+    )
+    bundle_retry_output = json.loads(capsys.readouterr().out)
+    assert code_bundle_retry == 0
+    assert bundle_retry_output["ok"] is True
+
+    code_apply = main(
+        [
+            "plan",
+            "intent",
+            "apply",
+            "--intent-id",
+            "I-001",
+            "--fingerprint",
+            bundle_retry_output["data"]["decision_fingerprint"],
+            "--retry-on-fail",
+            "1",
+        ],
+        cwd=tmp_path,
+    )
+    apply_output = json.loads(capsys.readouterr().out)
+    assert code_apply == 0
+    assert apply_output["ok"] is True
+    assert apply_output["data"]["applied"] is False
+
+
 def test_cli_main_returns_error_code_for_invalid_input(tmp_path: Path, capsys) -> None:
     _write_fixture_repo(tmp_path)
     code = main(["task", "pack", "--task-id", ""], cwd=tmp_path)

@@ -13,6 +13,7 @@ active_tasks:
 blocked_tasks: []
 next_tasks:
 - T-016
+- T-019
 milestones:
 - M1-front-matter-migration
 - M2-architecture-alignment
@@ -142,3 +143,4 @@ links:
 ## Next Tasks
 
 - [T-016](./tasks/T-016-cli-human-context-view.md)
+- [T-019](./tasks/T-019-intent-automation-apply.md)

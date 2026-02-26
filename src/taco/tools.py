@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import re
 from dataclasses import dataclass
@@ -100,6 +101,11 @@ def call_tool(state: RepoState, name: str, args: dict[str, Any]) -> dict[str, An
         "plan.intent.list": _plan_intent_list,
         "plan.intent.view": _plan_intent_view,
         "plan.intent.index": _plan_intent_index,
+        "plan.intent.propose": _plan_intent_propose,
+        "plan.intent.autodesign": _plan_intent_autodesign,
+        "plan.intent.generate_tasks": _plan_intent_generate_tasks,
+        "plan.intent.review_bundle": _plan_intent_review_bundle,
+        "plan.intent.apply": _plan_intent_apply,
         "task.targets": _task_targets,
         "task.record": _task_record,
         "task.complete": _task_complete,
@@ -534,6 +540,10 @@ def _plan_intent_index(state: RepoState, args: dict[str, Any]) -> dict[str, Any]
         gaps.append("coverage.flows_missing")
     if existing_refs and not coverage["schemas"]:
         gaps.append("coverage.schemas_missing")
+    if not _has_flow_intent_ref(state, intent_id):
+        gaps.append("flow_missing_intent_ref")
+    if not _is_intent_active_in_plan(state, intent_id):
+        gaps.append("plan_queue_mismatch")
     return {
         "intent": {
             "id": intent_id,
@@ -549,6 +559,246 @@ def _plan_intent_index(state: RepoState, args: dict[str, Any]) -> dict[str, Any]
         "gaps": gaps,
         "required_refs_used": list(
             state.required_refs_by_tool.get("plan.intent.index", ())
+        ),
+        "decision_fingerprint": _fingerprint(
+            [
+                intent_id,
+                *task_refs,
+                *[item["id"] for item in coverage["modules"]],
+                *[item["id"] for item in coverage["flows"]],
+                *[item["id"] for item in coverage["schemas"]],
+                *gaps,
+            ]
+        ),
+    }
+
+
+def _plan_intent_propose(state: RepoState, args: dict[str, Any]) -> dict[str, Any]:
+    intent_id = _required_str(args, "intent_id")
+    intent_text = _required_str(args, "intent_text")
+    title_raw = args.get("title", "")
+    title = _normalize_line(str(title_raw) if isinstance(title_raw, str) else "")
+    if not title:
+        title = f"{intent_id.lower()}-intent"
+    plan_id = _plan_id_from_config(state)
+    keywords = _extract_keywords(intent_text)
+    existing = state.index.node_index.get(intent_id)
+    quality = {
+        "pass": len(keywords) > 0,
+        "fail_reasons": [] if keywords else ["intent_text_too_short"],
+    }
+    return {
+        "intent": {
+            "id": intent_id,
+            "title": title,
+            "status": "active",
+            "plan_ref": plan_id,
+            "task_refs": [],
+            "links": [plan_id, "ARCH-INDEX", "PROJ-INTENT-INDEX"],
+            "intent_text": intent_text.strip(),
+            "keywords": keywords,
+        },
+        "existing_path": existing or "",
+        "quality_gate": quality,
+        "write_targets": [
+            ".context/project/intents/index.md",
+            f".context/project/intents/{intent_id}-generated.md",
+        ],
+    }
+
+
+def _plan_intent_autodesign(state: RepoState, args: dict[str, Any]) -> dict[str, Any]:
+    indexed = _plan_intent_index(state, args)
+    data = indexed
+    intent = data["intent"]
+    intent_id = str(intent["id"])
+    gaps = data["gaps"]
+    updates: list[dict[str, Any]] = []
+    if "flow_missing_intent_ref" in gaps:
+        updates.append(
+            {
+                "path": ".context/project/architecture/flows/mode-transition.md",
+                "action": "append_intent_ref",
+                "payload": {"intent_refs_add": [intent_id]},
+                "reason": "bind flow to intent",
+            }
+        )
+    if "plan_queue_mismatch" in gaps:
+        updates.append(
+            {
+                "path": ".context/project/plan.md",
+                "action": "append_active_intent",
+                "payload": {"active_intents_add": [intent_id]},
+                "reason": "keep plan queue aligned with intent",
+            }
+        )
+    for gap, path in (
+        ("coverage.modules_missing", ".context/project/architecture/modules/"),
+        ("coverage.flows_missing", ".context/project/architecture/flows/"),
+        ("coverage.schemas_missing", ".context/project/architecture/schemas/"),
+    ):
+        if gap in gaps:
+            updates.append(
+                {
+                    "path": path,
+                    "action": "create_missing_design_node",
+                    "payload": {"gap": gap, "intent_id": intent_id},
+                    "reason": "close design coverage gap",
+                }
+            )
+
+    quality_gate = {
+        "pass": len(gaps) == 0 or len(updates) > 0,
+        "fail_reasons": [],
+    }
+    if len(gaps) > 0 and len(updates) == 0:
+        quality_gate["pass"] = False
+        quality_gate["fail_reasons"] = ["no_autodesign_action_for_gap"]
+
+    return {
+        "intent": intent,
+        "gaps": gaps,
+        "proposed_updates": updates,
+        "quality_gate": quality_gate,
+    }
+
+
+def _plan_intent_generate_tasks(
+    state: RepoState, args: dict[str, Any]
+) -> dict[str, Any]:
+    indexed = _plan_intent_index(state, args)
+    return _plan_intent_generate_tasks_from_index(state, indexed)
+
+
+def _plan_intent_review_bundle(
+    state: RepoState, args: dict[str, Any]
+) -> dict[str, Any]:
+    retry_on_fail = args.get("retry_on_fail", 0)
+    if not isinstance(retry_on_fail, int) or retry_on_fail < 0:
+        raise ToolError(
+            "invalid_input",
+            "retry_on_fail must be a non-negative integer",
+            {"key": "retry_on_fail"},
+        )
+
+    indexed = _plan_intent_index(state, args)
+    autodesign = _plan_intent_autodesign(state, args)
+    generated = _plan_intent_generate_tasks(state, args)
+
+    retries_used = 0
+    if (
+        retry_on_fail > 0
+        and (
+            not bool(autodesign["quality_gate"]["pass"])
+            or not bool(generated["quality_gate"]["pass"])
+        )
+    ):
+        retries_used = 1
+        indexed, autodesign, generated = _retry_bundle_once(
+            state, indexed, autodesign, generated
+        )
+
+    final_pass = bool(autodesign["quality_gate"]["pass"]) and bool(
+        generated["quality_gate"]["pass"]
+    )
+    fail_reasons: list[str] = []
+    if not autodesign["quality_gate"]["pass"]:
+        fail_reasons.extend(
+            [
+                f"autodesign:{reason}"
+                for reason in autodesign["quality_gate"]["fail_reasons"]
+            ]
+        )
+    if not generated["quality_gate"]["pass"]:
+        fail_reasons.extend(
+            [
+                f"task_generation:{reason}"
+                for reason in generated["quality_gate"]["fail_reasons"]
+            ]
+        )
+    approval_bundle = {
+        "intent": indexed["intent"],
+        "coverage": indexed["coverage"],
+        "gaps": indexed["gaps"],
+        "autodesign_updates": autodesign["proposed_updates"],
+        "existing_candidate_tasks": generated["existing_candidate_tasks"],
+        "generated_tasks": generated["generated_tasks"],
+        "quality_gate": {
+            "pass": final_pass,
+            "fail_reasons": fail_reasons,
+            "approval_required": True,
+        },
+        "decision_fingerprint": indexed["decision_fingerprint"],
+        "retry": {
+            "requested": retry_on_fail,
+            "used": retries_used,
+        },
+    }
+    return approval_bundle
+
+
+def _plan_intent_apply(state: RepoState, args: dict[str, Any]) -> dict[str, Any]:
+    intent_id = _required_str(args, "intent_id")
+    expected_fingerprint = _required_str(args, "fingerprint")
+    retry_on_fail = args.get("retry_on_fail", 0)
+    if not isinstance(retry_on_fail, int) or retry_on_fail < 0:
+        raise ToolError(
+            "invalid_input",
+            "retry_on_fail must be a non-negative integer",
+            {"key": "retry_on_fail"},
+        )
+    dry_run = args.get("dry_run", True)
+    if not isinstance(dry_run, bool):
+        raise ToolError("invalid_input", "dry_run must be boolean", {"key": "dry_run"})
+
+    review = _plan_intent_review_bundle(
+        state, {"intent_id": intent_id, "retry_on_fail": retry_on_fail}
+    )
+    actual_fingerprint = str(review.get("decision_fingerprint", ""))
+    if actual_fingerprint != expected_fingerprint:
+        raise ToolError(
+            "fingerprint_mismatch",
+            "provided fingerprint does not match latest review bundle",
+            {"expected": expected_fingerprint, "actual": actual_fingerprint},
+        )
+    quality = review.get("quality_gate", {})
+    if not isinstance(quality, dict) or not bool(quality.get("pass")):
+        raise ToolError(
+            "quality_gate_failed",
+            "review bundle did not pass quality gate",
+            {"intent_id": intent_id},
+        )
+
+    writes: list[dict[str, Any]] = []
+    for update in review.get("autodesign_updates", []):
+        if not isinstance(update, dict):
+            continue
+        writes.extend(_apply_autodesign_update(state, update, dry_run))
+
+    generated_tasks = review.get("generated_tasks", [])
+    if isinstance(generated_tasks, list):
+        writes.extend(
+            _apply_generated_tasks(state, intent_id, generated_tasks, dry_run)
+        )
+
+    if not dry_run:
+        _append_generated_tasks_to_intent(
+            state,
+            intent_id,
+            [
+                str(task.get("task_id", ""))
+                for task in generated_tasks
+                if isinstance(task, dict)
+            ],
+        )
+
+    return {
+        "intent_id": intent_id,
+        "applied": not dry_run,
+        "decision_fingerprint": actual_fingerprint,
+        "writes": writes,
+        "generated_task_count": (
+            len(generated_tasks) if isinstance(generated_tasks, list) else 0
         ),
     }
 
@@ -1124,6 +1374,479 @@ def _summarize_ref_nodes(ref_ids: list[str], state: RepoState) -> list[dict[str,
             }
         )
     return rows
+
+
+def _has_flow_intent_ref(state: RepoState, intent_id: str) -> bool:
+    for doc in state.index.documents:
+        if doc.doc_type != "flow":
+            continue
+        meta = doc.metadata if isinstance(doc.metadata, dict) else {}
+        refs = _collect_string_list(meta.get("intent_refs"))
+        if intent_id in refs:
+            return True
+    return False
+
+
+def _is_intent_active_in_plan(state: RepoState, intent_id: str) -> bool:
+    plan_path = _plan_path_from_config(state.config_raw)
+    text = state.index.document_texts.get(plan_path)
+    if text is None:
+        text = (state.root / plan_path).read_text(encoding="utf-8")
+    meta, _ = _split_front_matter(text)
+    values = _collect_string_list(meta.get("active_intents"))
+    return intent_id in values
+
+
+def _plan_id_from_config(state: RepoState) -> str:
+    plan_path = _plan_path_from_config(state.config_raw)
+    text = state.index.document_texts.get(plan_path)
+    if text is None:
+        text = (state.root / plan_path).read_text(encoding="utf-8")
+    meta, _ = _split_front_matter(text)
+    value = meta.get("id")
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    return "PLAN-MAIN"
+
+
+def _normalize_line(value: str) -> str:
+    return re.sub(r"\s+", " ", value).strip()
+
+
+def _extract_keywords(intent_text: str) -> list[str]:
+    tokens = re.findall(r"[a-zA-Z][a-zA-Z0-9_-]{2,}", intent_text.lower())
+    stopwords = {
+        "the",
+        "and",
+        "for",
+        "with",
+        "that",
+        "this",
+        "from",
+        "into",
+        "mode",
+        "plan",
+        "intent",
+    }
+    values: list[str] = []
+    for token in tokens:
+        if token in stopwords:
+            continue
+        if token not in values:
+            values.append(token)
+        if len(values) >= 8:
+            break
+    return values
+
+
+def _task_templates_for_gaps(gaps: list[str]) -> list[dict[str, str | int]]:
+    mapping: dict[str, dict[str, str | int]] = {
+        "intent.task_refs_missing": {
+            "slug": "intent-bootstrap-task",
+            "reason": "create initial executable task linkage",
+            "risk_score": 8,
+        },
+        "intent.no_existing_task_refs": {
+            "slug": "intent-relink-task-refs",
+            "reason": "repair invalid task linkage",
+            "risk_score": 9,
+        },
+        "coverage.modules_missing": {
+            "slug": "define-missing-modules",
+            "reason": "close architecture module coverage",
+            "risk_score": 8,
+        },
+        "coverage.flows_missing": {
+            "slug": "define-missing-flows",
+            "reason": "close architecture flow coverage",
+            "risk_score": 8,
+        },
+        "coverage.schemas_missing": {
+            "slug": "define-missing-schemas",
+            "reason": "close architecture schema coverage",
+            "risk_score": 7,
+        },
+        "flow_missing_intent_ref": {
+            "slug": "link-flow-intent-refs",
+            "reason": "bind flow documents to intent",
+            "risk_score": 7,
+        },
+        "plan_queue_mismatch": {
+            "slug": "sync-plan-active-intents",
+            "reason": "align plan active_intents queue",
+            "risk_score": 6,
+        },
+    }
+    templates: list[dict[str, str | int]] = []
+    for gap in sorted(dict.fromkeys(gaps)):
+        spec = mapping.get(gap)
+        if spec is None:
+            continue
+        templates.append(spec)
+    return templates
+
+
+def _next_task_ids(state: RepoState, count: int) -> list[str]:
+    current = [
+        int(task_id[2:])
+        for task_id in state.index.task_index
+        if task_id.startswith("T-")
+    ]
+    start = (max(current) + 1) if current else 1
+    values: list[str] = []
+    for idx in range(count):
+        values.append(f"T-{start + idx:03d}")
+    return values
+
+
+def _priority_from_risk(risk_score: int) -> str:
+    if risk_score >= 8:
+        return "p0"
+    if risk_score >= 6:
+        return "p1"
+    return "p2"
+
+
+def _candidate_risk_score(row: dict[str, Any]) -> int:
+    status = str(row.get("status", ""))
+    missing = row.get("missing_requirements", [])
+    missing_count = len(missing) if isinstance(missing, list) else 0
+    status_weight = {"blocked": 9, "todo": 7, "active": 5, "done": 1}.get(status, 3)
+    return status_weight + missing_count
+
+
+def _fingerprint(parts: list[str]) -> str:
+    normalized = "|".join(part.strip() for part in parts if part.strip())
+    digest = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+    return digest[:16]
+
+
+def _retry_bundle_once(
+    state: RepoState,
+    indexed: dict[str, Any],
+    autodesign: dict[str, Any],
+    generated: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+    revised_indexed = dict(indexed)
+    gaps = list(indexed.get("gaps", []))
+    updates = autodesign.get("proposed_updates", [])
+    if isinstance(updates, list):
+        for item in updates:
+            if not isinstance(item, dict):
+                continue
+            action = str(item.get("action", ""))
+            if action == "append_intent_ref" and "flow_missing_intent_ref" in gaps:
+                gaps.remove("flow_missing_intent_ref")
+            if action == "append_active_intent" and "plan_queue_mismatch" in gaps:
+                gaps.remove("plan_queue_mismatch")
+    revised_indexed["gaps"] = gaps
+    revised_indexed["decision_fingerprint"] = _fingerprint(
+        [
+            str(revised_indexed.get("intent", {}).get("id", "")),
+            *[str(gap) for gap in gaps],
+            "retry",
+        ]
+    )
+
+    revised_autodesign = dict(autodesign)
+    revised_autodesign["gaps"] = gaps
+    revised_autodesign["quality_gate"] = {
+        "pass": True,
+        "fail_reasons": [],
+    }
+
+    revised_generated = _plan_intent_generate_tasks_from_index(state, revised_indexed)
+    return revised_indexed, revised_autodesign, revised_generated
+
+
+def _plan_intent_generate_tasks_from_index(
+    state: RepoState, indexed: dict[str, Any]
+) -> dict[str, Any]:
+    intent = indexed["intent"]
+    intent_id = str(intent["id"])
+    title = str(intent["title"])
+    gaps = list(indexed["gaps"])
+    existing_candidates = indexed["candidate_tasks"]
+
+    generated: list[dict[str, Any]] = []
+    templates = _task_templates_for_gaps(gaps)
+    next_ids = _next_task_ids(state, len(templates))
+    for idx, template in enumerate(templates):
+        task_id = next_ids[idx]
+        risk_score = int(template["risk_score"])
+        generated.append(
+            {
+                "task_id": task_id,
+                "title": f"{task_id.lower()}-{template['slug']}",
+                "intent_id": intent_id,
+                "intent_title": title,
+                "reason": template["reason"],
+                "priority": _priority_from_risk(risk_score),
+                "risk_score": risk_score,
+                "status": "todo",
+                "ready_for_build": False,
+            }
+        )
+
+    sorted_candidates = sorted(
+        existing_candidates,
+        key=lambda row: (-_candidate_risk_score(row), str(row["task_id"])),
+    )
+
+    quality_gate: dict[str, Any] = {
+        "pass": True,
+        "fail_reasons": [],
+        "fix_suggestions": [],
+    }
+    if gaps and not generated:
+        quality_gate["pass"] = False
+        quality_gate["fail_reasons"].append("gaps_unresolved_by_generation")
+    if not gaps and not sorted_candidates:
+        quality_gate["pass"] = False
+        quality_gate["fail_reasons"].append("no_candidate_tasks")
+    if not quality_gate["pass"]:
+        quality_gate["fix_suggestions"].append(
+            "add or refine task_refs and rerun plan.intent.index"
+        )
+
+    return {
+        "intent": intent,
+        "existing_candidate_tasks": sorted_candidates,
+        "generated_tasks": generated,
+        "quality_gate": quality_gate,
+        "decision_fingerprint": str(indexed.get("decision_fingerprint", "")),
+    }
+
+
+def _apply_autodesign_update(
+    state: RepoState, update: dict[str, Any], dry_run: bool
+) -> list[dict[str, Any]]:
+    path = str(update.get("path", ""))
+    action = str(update.get("action", ""))
+    payload = update.get("payload", {})
+    writes: list[dict[str, Any]] = []
+    if not path or not action or not isinstance(payload, dict):
+        return writes
+
+    if action == "append_intent_ref":
+        values = _collect_string_list(payload.get("intent_refs_add"))
+        if not values:
+            return writes
+        target = state.root / path
+        if not target.exists():
+            return writes
+        text = target.read_text(encoding="utf-8")
+        meta, body = _split_front_matter(text)
+        existing = _collect_string_list(meta.get("intent_refs"))
+        updated = list(existing)
+        for value in values:
+            if value not in updated:
+                updated.append(value)
+        meta["intent_refs"] = updated
+        if not dry_run:
+            target.write_text(_compose_front_matter(meta, body), encoding="utf-8")
+        writes.append({"path": path, "action": action, "values": values})
+        return writes
+
+    if action == "append_active_intent":
+        values = _collect_string_list(payload.get("active_intents_add"))
+        if not values:
+            return writes
+        target = state.root / path
+        if not target.exists():
+            return writes
+        text = target.read_text(encoding="utf-8")
+        meta, body = _split_front_matter(text)
+        existing = _collect_string_list(meta.get("active_intents"))
+        updated = list(existing)
+        for value in values:
+            if value not in updated:
+                updated.append(value)
+        meta["active_intents"] = updated
+        if not dry_run:
+            target.write_text(_compose_front_matter(meta, body), encoding="utf-8")
+        writes.append({"path": path, "action": action, "values": values})
+        return writes
+
+    if action == "create_missing_design_node":
+        gap = str(payload.get("gap", ""))
+        intent_id = str(payload.get("intent_id", ""))
+        if not gap or not intent_id:
+            return writes
+        created = _create_design_node_for_gap(state, path, gap, intent_id, dry_run)
+        if created:
+            writes.append(created)
+        return writes
+
+    return writes
+
+
+def _create_design_node_for_gap(
+    state: RepoState, base_path: str, gap: str, intent_id: str, dry_run: bool
+) -> dict[str, Any] | None:
+    if gap == "coverage.modules_missing":
+        node_type = "module"
+        node_id = f"MOD-{intent_id}-AUTO"
+        title = f"{intent_id} Auto Module"
+        heading = "# Auto Module"
+    elif gap == "coverage.flows_missing":
+        node_type = "flow"
+        node_id = f"FLOW-{intent_id}-AUTO"
+        title = f"{intent_id} Auto Flow"
+        heading = "# Auto Flow"
+    elif gap == "coverage.schemas_missing":
+        node_type = "schema"
+        node_id = f"SCH-{intent_id}-AUTO"
+        title = f"{intent_id} Auto Schema"
+        heading = "# Auto Schema"
+    else:
+        return None
+
+    filename = f"{intent_id.lower()}-auto-{node_type}.md"
+    rel_path = f"{base_path.rstrip('/')}/{filename}"
+    target = state.root / rel_path
+    if target.exists():
+        return {
+            "path": rel_path,
+            "action": "create_missing_design_node",
+            "created": False,
+        }
+    content = "\n".join(
+        [
+            "---",
+            f"id: {node_id}",
+            f"type: {node_type}",
+            f"title: {title}",
+            "status: active",
+            f"links: [{intent_id}, ARCH-INDEX]",
+            "---",
+            "",
+            heading,
+            "",
+            "- Auto-generated draft node.",
+            "",
+        ]
+    )
+    if not dry_run:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(content, encoding="utf-8")
+    return {"path": rel_path, "action": "create_missing_design_node", "created": True}
+
+
+def _apply_generated_tasks(
+    state: RepoState, intent_id: str, generated_tasks: list[Any], dry_run: bool
+) -> list[dict[str, Any]]:
+    writes: list[dict[str, Any]] = []
+    for item in generated_tasks:
+        if not isinstance(item, dict):
+            continue
+        task_id = str(item.get("task_id", "")).strip()
+        title = str(item.get("title", "")).strip()
+        priority = str(item.get("priority", "p1")).strip() or "p1"
+        reason = str(item.get("reason", "")).strip()
+        if not task_id or not title:
+            continue
+        rel_path = f".context/project/tasks/{title}.md"
+        target = state.root / rel_path
+        if target.exists():
+            writes.append({"path": rel_path, "action": "create_task", "created": False})
+            continue
+        content = _render_generated_task_doc(
+            task_id=task_id,
+            title=title,
+            priority=priority,
+            reason=reason,
+            intent_id=intent_id,
+        )
+        if not dry_run:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(content, encoding="utf-8")
+        writes.append({"path": rel_path, "action": "create_task", "created": True})
+    return writes
+
+
+def _render_generated_task_doc(
+    task_id: str,
+    title: str,
+    priority: str,
+    reason: str,
+    intent_id: str,
+) -> str:
+    return "\n".join(
+        [
+            "---",
+            f"id: {task_id}",
+            "type: task",
+            f"title: {title}",
+            "status: todo",
+            "plan_ref: PLAN-MAIN",
+            f"priority: {priority}",
+            "estimate: m",
+            "scope:",
+            "  in: []",
+            "  out: []",
+            "references:",
+            "  modules: [ARCH-INDEX]",
+            "  flows: [FLOW-MODE-TRANSITION]",
+            "  schemas: [SCH-TOOL-ENVELOPE]",
+            "  governance: [GOV-CODE-PRINCIPLES]",
+            f"links: [PLAN-MAIN, ARCH-INDEX, {intent_id}]",
+            "---",
+            "",
+            f"# Task: {title}",
+            "",
+            "## Intent",
+            "",
+            f"- Auto-generated from intent `{intent_id}`.",
+            "",
+            "## Goal",
+            "",
+            f"- {reason or 'Address generated planning gap.'}",
+            "",
+            "## Scope",
+            "",
+            "- Fill generated scope from review bundle.",
+            "",
+            "## Implementation Approach",
+            "",
+            "- Define implementation details before build mode handoff.",
+            "",
+            "## Verification Approach",
+            "",
+            "- Define deterministic verification checklist.",
+            "",
+            "## Implementation Result",
+            "",
+            "- Pending",
+            "",
+            "## Verification Result",
+            "",
+            "- Pending",
+            "",
+        ]
+    )
+
+
+def _append_generated_tasks_to_intent(
+    state: RepoState, intent_id: str, generated_task_ids: list[str]
+) -> None:
+    path = state.index.node_index.get(intent_id)
+    if not path:
+        return
+    target = state.root / path
+    if not target.exists():
+        return
+    text = target.read_text(encoding="utf-8")
+    meta, body = _split_front_matter(text)
+    if not meta:
+        return
+    task_refs = _collect_string_list(meta.get("task_refs"))
+    for task_id in generated_task_ids:
+        value = task_id.strip()
+        if value and value not in task_refs:
+            task_refs.append(value)
+    meta["task_refs"] = task_refs
+    target.write_text(_compose_front_matter(meta, body), encoding="utf-8")
 
 
 def _collect_arch_nodes(state: RepoState, doc_type: str) -> list[dict[str, Any]]:

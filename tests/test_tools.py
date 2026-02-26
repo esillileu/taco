@@ -270,6 +270,46 @@ def test_task_list_and_pack_and_targets(tmp_path: Path) -> None:
     assert plan_intent_indexed["ok"] is True
     assert plan_intent_indexed["data"]["intent"]["id"] == "I-001"
     assert plan_intent_indexed["data"]["candidate_tasks"][0]["task_id"] == "T-005"
+    proposed = call_tool(
+        state,
+        "plan.intent.propose",
+        {
+            "intent_id": "I-010",
+            "intent_text": "improve deterministic planning flow",
+            "title": "planning flow",
+        },
+    )
+    assert proposed["ok"] is True
+    assert proposed["data"]["intent"]["id"] == "I-010"
+    auto = call_tool(state, "plan.intent.autodesign", {"intent_id": "I-001"})
+    assert auto["ok"] is True
+    assert "proposed_updates" in auto["data"]
+    generated = call_tool(state, "plan.intent.generate_tasks", {"intent_id": "I-001"})
+    assert generated["ok"] is True
+    assert "quality_gate" in generated["data"]
+    bundle = call_tool(state, "plan.intent.review_bundle", {"intent_id": "I-001"})
+    assert bundle["ok"] is True
+    assert bundle["data"]["quality_gate"]["approval_required"] is True
+    bundle_retry = call_tool(
+        state,
+        "plan.intent.review_bundle",
+        {"intent_id": "I-001", "retry_on_fail": 1},
+    )
+    assert bundle_retry["ok"] is True
+    assert bundle_retry["data"]["retry"]["requested"] == 1
+    fingerprint = bundle_retry["data"]["decision_fingerprint"]
+    apply_preview = call_tool(
+        state,
+        "plan.intent.apply",
+        {
+            "intent_id": "I-001",
+            "fingerprint": fingerprint,
+            "retry_on_fail": 1,
+            "dry_run": True,
+        },
+    )
+    assert apply_preview["ok"] is True
+    assert apply_preview["data"]["applied"] is False
 
     target = call_tool(
         state,

@@ -112,6 +112,11 @@ Architecture anchor for modules, flows, and schemas. This document is global SSO
 - `plan.intent.list`
 - `plan.intent.view`
 - `plan.intent.index`
+- `plan.intent.propose`
+- `plan.intent.autodesign`
+- `plan.intent.generate_tasks`
+- `plan.intent.review_bundle`
+- `plan.intent.apply`
 - `doc.snippet`
 - `issue.triage`
 - `convention.get`
