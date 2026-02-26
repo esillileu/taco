@@ -55,6 +55,17 @@ def build_parser() -> argparse.ArgumentParser:
     doc_snippet = doc_sub.add_parser("snippet")
     doc_snippet.add_argument("--path", required=True)
     doc_snippet.add_argument("--anchor-id", required=True)
+    doc_section = doc_sub.add_parser("section")
+    doc_section_sub = doc_section.add_subparsers(dest="doc_action", required=True)
+    doc_section_get = doc_section_sub.add_parser("get")
+    doc_section_get.add_argument("--path", required=True)
+    doc_section_get.add_argument("--section-id", required=True)
+    doc_section_patch = doc_section_sub.add_parser("patch")
+    doc_section_patch.add_argument("--path", required=True)
+    doc_section_patch.add_argument("--section-id", required=True)
+    doc_section_patch.add_argument("--base-fingerprint", required=True)
+    doc_section_patch.add_argument("--ops-json", required=True)
+    doc_section_patch.add_argument("--apply", action="store_true")
 
     issue_parser = domain_subparsers.add_parser("issue")
     issue_sub = issue_parser.add_subparsers(dest="action", required=True)
@@ -79,27 +90,23 @@ def build_parser() -> argparse.ArgumentParser:
     plan_intent_index = plan_intent_sub.add_parser("index")
     plan_intent_index.add_argument("--intent-id", required=True)
     plan_intent_index.add_argument("--budget-tokens", type=int, default=None)
-    plan_intent_propose = plan_intent_sub.add_parser("propose")
-    plan_intent_propose.add_argument("--intent-id", required=True)
-    plan_intent_propose.add_argument("--title", default="")
-    plan_intent_propose.add_argument("--intent-text", required=True)
-    plan_intent_sub.add_parser("autodesign").add_argument("--intent-id", required=True)
-    plan_intent_sub.add_parser("generate-tasks").add_argument(
-        "--intent-id", required=True
-    )
-    plan_intent_review = plan_intent_sub.add_parser("review-bundle")
-    plan_intent_review.add_argument("--intent-id", required=True)
-    plan_intent_review.add_argument("--retry-on-fail", type=int, default=0)
-    plan_intent_apply = plan_intent_sub.add_parser("apply")
-    plan_intent_apply.add_argument("--intent-id", required=True)
-    plan_intent_apply.add_argument("--fingerprint", required=True)
-    plan_intent_apply.add_argument("--retry-on-fail", type=int, default=0)
-    plan_intent_apply.add_argument("--apply", action="store_true")
+    plan_intent_validate = plan_intent_sub.add_parser("validate")
+    plan_intent_validate.add_argument("--intent-id", required=True)
     plan_sub.add_parser("view")
     plan_locate = plan_sub.add_parser("locate")
     plan_locate.add_argument("--change-type", required=True)
     plan_locate.add_argument("--target", default="")
     plan_sub.add_parser("validate")
+
+    build_parser = domain_subparsers.add_parser("build")
+    build_sub = build_parser.add_subparsers(dest="action", required=True)
+    build_precheck = build_sub.add_parser("precheck")
+    build_precheck.add_argument("--pack-json", required=True)
+    build_postcheck = build_sub.add_parser("postcheck")
+    build_postcheck.add_argument("--pack-json", required=True)
+    build_postcheck.add_argument("--changed-paths-json", default="[]")
+    build_postcheck.add_argument("--produced-outputs-json", default="[]")
+    build_postcheck.add_argument("--check-results-json", default="{}")
 
     return parser
 
@@ -116,6 +123,9 @@ def main(argv: list[str] | None = None, cwd: Path | None = None) -> int:
         if args.domain == "plan" and action == "intent":
             intent_action = str(getattr(args, "intent_action", "") or "")
             action = f"intent.{intent_action}"
+        if args.domain == "doc" and action == "section":
+            doc_action = str(getattr(args, "doc_action", "") or "")
+            action = f"section.{doc_action}"
         tool_name, payload = map_cli_to_tool(args.domain, action, options)
         if human_context and tool_name not in {"task.pack", "doc.snippet"}:
             response = {
@@ -182,6 +192,8 @@ def _to_options(args: argparse.Namespace) -> dict[str, Any]:
         options["reason"] = args.reason
     if getattr(args, "path", None) is not None:
         options["path"] = args.path
+    if getattr(args, "section_id", None) is not None:
+        options["section_id"] = args.section_id
     if getattr(args, "anchor_id", None) is not None:
         options["anchor_id"] = args.anchor_id
     if getattr(args, "title", None) is not None:
@@ -204,6 +216,24 @@ def _to_options(args: argparse.Namespace) -> dict[str, Any]:
         options["fingerprint"] = args.fingerprint
     if getattr(args, "retry_on_fail", None) is not None:
         options["retry_on_fail"] = args.retry_on_fail
+    if getattr(args, "base_fingerprint", None) is not None:
+        options["base_fingerprint"] = args.base_fingerprint
+    if getattr(args, "ops_json", None) is not None:
+        options["ops"] = _parse_json_option(args.ops_json, "ops_json")
+    if getattr(args, "pack_json", None) is not None:
+        options["pack"] = _parse_json_option(args.pack_json, "pack_json")
+    if getattr(args, "changed_paths_json", None) is not None:
+        options["changed_paths"] = _parse_json_option(
+            args.changed_paths_json, "changed_paths_json"
+        )
+    if getattr(args, "produced_outputs_json", None) is not None:
+        options["produced_outputs"] = _parse_json_option(
+            args.produced_outputs_json, "produced_outputs_json"
+        )
+    if getattr(args, "check_results_json", None) is not None:
+        options["check_results"] = _parse_json_option(
+            args.check_results_json, "check_results_json"
+        )
     if hasattr(args, "apply"):
         options["dry_run"] = not bool(args.apply)
     if getattr(args, "human_context", False):
@@ -237,6 +267,17 @@ def _render_human_context(tool_name: str, data: Any) -> str:
         snippet = str(data.get("snippet", "")).rstrip()
         return f"{heading} ({target})\n\n{snippet}"
     return "(unsupported tool)"
+
+
+def _parse_json_option(raw: str, key: str) -> Any:
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise CliError(
+            "invalid_option",
+            f"{key} must be valid json",
+            {"key": key, "error": str(exc)},
+        ) from exc
 
 
 if __name__ == "__main__":

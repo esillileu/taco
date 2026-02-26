@@ -94,6 +94,19 @@ def load_repo_state(root: Path, config_path: Path | None = None) -> RepoState:
 
 
 def call_tool(state: RepoState, name: str, args: dict[str, Any]) -> dict[str, Any]:
+    removed = {
+        "plan.intent.propose",
+        "plan.intent.autodesign",
+        "plan.intent.generate_tasks",
+        "plan.intent.review_bundle",
+        "plan.intent.apply",
+    }
+    if name in removed:
+        return _error(
+            "removed_tool",
+            "tool was removed in migration",
+            {"tool": name},
+        )
     handlers = {
         "task.list": _task_list,
         "task.pack": _task_pack,
@@ -101,16 +114,16 @@ def call_tool(state: RepoState, name: str, args: dict[str, Any]) -> dict[str, An
         "plan.intent.list": _plan_intent_list,
         "plan.intent.view": _plan_intent_view,
         "plan.intent.index": _plan_intent_index,
-        "plan.intent.propose": _plan_intent_propose,
-        "plan.intent.autodesign": _plan_intent_autodesign,
-        "plan.intent.generate_tasks": _plan_intent_generate_tasks,
-        "plan.intent.review_bundle": _plan_intent_review_bundle,
-        "plan.intent.apply": _plan_intent_apply,
+        "plan.intent.validate": _plan_intent_validate,
         "task.targets": _task_targets,
         "task.record": _task_record,
         "task.complete": _task_complete,
         "task.block": _task_block,
         "doc.snippet": _doc_snippet,
+        "doc.section.get": _doc_section_get,
+        "doc.section.patch": _doc_section_patch,
+        "build.precheck": _build_precheck,
+        "build.postcheck": _build_postcheck,
         "issue.triage": _issue_triage,
         "convention.get": _convention_get,
         "plan.view": _plan_view,
@@ -589,6 +602,52 @@ def _plan_intent_index(state: RepoState, args: dict[str, Any]) -> dict[str, Any]
                 str(refactor_analysis.get("oversized_file_count", 0)),
             ]
         ),
+    }
+
+
+def _plan_intent_validate(state: RepoState, args: dict[str, Any]) -> dict[str, Any]:
+    indexed = _plan_intent_index(state, args)
+    intent = indexed["intent"]
+    path = str(intent.get("path", ""))
+    text = state.index.document_texts.get(path, "")
+    issues: list[dict[str, Any]] = []
+
+    required_keys = ("id", "title", "status", "plan_ref")
+    for key in required_keys:
+        value = intent.get(key)
+        if not isinstance(value, str) or not value.strip():
+            issues.append({"code": "missing_required_fields", "field": key})
+
+    refs = intent.get("task_refs", [])
+    if not isinstance(refs, list):
+        issues.append({"code": "missing_required_fields", "field": "task_refs"})
+
+    unresolved: list[str] = []
+    for gap in indexed.get("gaps", []):
+        if gap in {"intent.no_existing_task_refs"}:
+            unresolved.append(gap)
+    if unresolved:
+        issues.append({"code": "unresolved_references", "items": unresolved})
+
+    markers = _placeholder_markers_in_text(text)
+    if markers:
+        issues.append({"code": "placeholder_detected", "markers": markers})
+
+    if issues:
+        raise ToolError(
+            "intent_validation_failed",
+            "intent document did not satisfy validation rules",
+            {"intent_id": intent.get("id", ""), "issues": issues},
+        )
+
+    return {
+        "intent_id": intent["id"],
+        "valid": True,
+        "checked_rules": [
+            "required_fields",
+            "reference_integrity",
+            "placeholder_policy",
+        ],
     }
 
 
@@ -1134,6 +1193,237 @@ def _doc_snippet(state: RepoState, args: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _doc_section_get(state: RepoState, args: dict[str, Any]) -> dict[str, Any]:
+    path = _required_str(args, "path")
+    section_id = _required_str(args, "section_id")
+    doc = next((item for item in state.index.documents if item.path == path), None)
+    if doc is None:
+        raise ToolError("doc_not_found", "document was not found", {"path": path})
+    heading = _find_heading_by_section_id(doc, section_id)
+    if heading is None:
+        raise ToolError(
+            "section_not_found",
+            "section was not found in document",
+            {"path": path, "section_id": section_id},
+        )
+    text = state.index.document_texts.get(path, "")
+    snippet = _slice_text(text, heading.start_line, heading.end_line)
+    return {
+        "path": path,
+        "section_id": section_id,
+        "heading": heading.heading,
+        "content": snippet,
+        "fingerprint": _fingerprint([path, section_id, snippet]),
+        "constraints": _doc_patch_constraints(path),
+    }
+
+
+def _doc_section_patch(state: RepoState, args: dict[str, Any]) -> dict[str, Any]:
+    path = _required_str(args, "path")
+    section_id = _required_str(args, "section_id")
+    base_fingerprint = _required_str(args, "base_fingerprint")
+    ops = args.get("ops")
+    mode = str(args.get("mode", "plan")).strip().lower() or "plan"
+    dry_run = args.get("dry_run", True)
+    if mode not in {"plan", "build"}:
+        raise ToolError("invalid_input", "mode must be plan or build", {"key": "mode"})
+    if not isinstance(dry_run, bool):
+        raise ToolError("invalid_input", "dry_run must be boolean", {"key": "dry_run"})
+    if not isinstance(ops, list) or not ops:
+        raise ToolError("invalid_input", "ops must be non-empty list", {"key": "ops"})
+
+    doc = next((item for item in state.index.documents if item.path == path), None)
+    if doc is None:
+        raise ToolError("doc_not_found", "document was not found", {"path": path})
+
+    heading = _find_heading_by_section_id(doc, section_id)
+    if heading is None:
+        raise ToolError(
+            "section_not_found",
+            "section was not found in document",
+            {"path": path, "section_id": section_id},
+        )
+
+    _enforce_doc_patch_scope(mode, path, heading.heading)
+
+    target = state.root / path
+    if not target.exists():
+        raise ToolError("doc_not_found", "document was not found", {"path": path})
+    original = target.read_text(encoding="utf-8")
+    current_section = _slice_text(original, heading.start_line, heading.end_line)
+    actual_fingerprint = _fingerprint([path, section_id, current_section])
+    if actual_fingerprint != base_fingerprint:
+        raise ToolError(
+            "fingerprint_mismatch",
+            "section fingerprint mismatch",
+            {
+                "path": path,
+                "section_id": section_id,
+                "expected": base_fingerprint,
+                "actual": actual_fingerprint,
+            },
+        )
+
+    updated = original
+    for op in ops:
+        if not isinstance(op, dict):
+            raise ToolError("invalid_patch_op", "patch op must be object", {"op": op})
+        kind = str(op.get("op", "")).strip()
+        if kind == "append_list_item":
+            text = str(op.get("text", "")).strip()
+            if not text:
+                raise ToolError(
+                    "invalid_patch_op",
+                    "append_list_item requires non-empty text",
+                    {"op": kind},
+                )
+            updated = _append_under_heading(updated, heading.heading, f"- {text}")
+        elif kind == "replace_block":
+            content = op.get("content")
+            if not isinstance(content, str):
+                raise ToolError(
+                    "invalid_patch_op",
+                    "replace_block requires string content",
+                    {"op": kind},
+                )
+            updated = _replace_heading_block(updated, heading.heading, content)
+        elif kind == "set_front_matter_key":
+            key = str(op.get("key", "")).strip()
+            if not key:
+                raise ToolError(
+                    "invalid_patch_op",
+                    "set_front_matter_key requires key",
+                    {"op": kind},
+                )
+            updated = _set_front_matter_key(updated, key, op.get("value"))
+        else:
+            raise ToolError(
+                "invalid_patch_op",
+                "unsupported patch op",
+                {"op": kind},
+            )
+
+    original_markers = set(_placeholder_markers_in_text(original))
+    updated_markers = set(_placeholder_markers_in_text(updated))
+    if sorted(updated_markers - original_markers):
+        raise ToolError(
+            "placeholder_detected",
+            "placeholder markers are not allowed",
+            {"path": path, "markers": sorted(updated_markers - original_markers)},
+        )
+
+    if not dry_run:
+        target.write_text(updated, encoding="utf-8")
+
+    refreshed = _slice_text(updated, heading.start_line, heading.end_line)
+    return {
+        "path": path,
+        "section_id": section_id,
+        "applied": not dry_run,
+        "fingerprint": _fingerprint([path, section_id, refreshed]),
+    }
+
+
+def _build_precheck(_state: RepoState, args: dict[str, Any]) -> dict[str, Any]:
+    pack = args.get("pack")
+    if not isinstance(pack, dict):
+        raise ToolError("pack_required", "build tools require task pack", {})
+    _validate_pack_v3(pack)
+    boundary = pack.get("scope_boundary")
+    criteria = pack.get("verification_criteria")
+    outputs = pack.get("required_outputs")
+    missing: list[str] = []
+    if not isinstance(boundary, dict):
+        missing.append("scope_boundary")
+    if not isinstance(criteria, list):
+        missing.append("verification_criteria")
+    if not isinstance(outputs, list):
+        missing.append("required_outputs")
+    if missing:
+        raise ToolError(
+            "missing_required_fields",
+            "pack precheck failed due to missing required fields",
+            {"fields": missing},
+        )
+    return {"valid": True, "checked": ["pack_version", "scope_boundary", "criteria"]}
+
+
+def _build_postcheck(_state: RepoState, args: dict[str, Any]) -> dict[str, Any]:
+    pack = args.get("pack")
+    if not isinstance(pack, dict):
+        raise ToolError("pack_required", "build tools require task pack", {})
+    _validate_pack_v3(pack)
+    boundary = pack.get("scope_boundary")
+    if not isinstance(boundary, dict):
+        raise ToolError(
+            "missing_required_fields",
+            "scope_boundary is required",
+            {"field": "scope_boundary"},
+        )
+    allowed = [
+        str(item).strip()
+        for item in boundary.get("allowed_paths", [])
+        if isinstance(item, str) and item.strip()
+    ]
+    forbidden = [
+        str(item).strip()
+        for item in boundary.get("forbidden_paths", [])
+        if isinstance(item, str) and item.strip()
+    ]
+    changed_paths = [
+        str(item).strip()
+        for item in args.get("changed_paths", [])
+        if isinstance(item, str) and item.strip()
+    ]
+    violations: list[str] = []
+    for path in changed_paths:
+        if any(path.startswith(prefix) for prefix in forbidden):
+            violations.append(path)
+            continue
+        if allowed and not any(path.startswith(prefix) for prefix in allowed):
+            violations.append(path)
+    if violations:
+        raise ToolError(
+            "forbidden_path_modified",
+            "build changed paths outside allowed boundary",
+            {"violations": violations},
+        )
+
+    required_outputs = [
+        str(item).strip()
+        for item in pack.get("required_outputs", [])
+        if isinstance(item, str) and item.strip()
+    ]
+    produced = {
+        str(item).strip()
+        for item in args.get("produced_outputs", [])
+        if isinstance(item, str) and str(item).strip()
+    }
+    missing_outputs = [item for item in required_outputs if item not in produced]
+    if missing_outputs:
+        raise ToolError(
+            "missing_required_fields",
+            "required outputs were not produced",
+            {"required_outputs": missing_outputs},
+        )
+
+    checks = args.get("check_results", {})
+    if isinstance(checks, dict):
+        failed_checks = [key for key, value in checks.items() if value is False]
+        if failed_checks:
+            raise ToolError(
+                "mode_transition_blocked",
+                "verification checks reported failure",
+                {"failed_checks": failed_checks},
+            )
+
+    return {
+        "valid": True,
+        "changed_paths": changed_paths,
+        "required_outputs": required_outputs,
+    }
+
+
 def _issue_triage(_: RepoState, args: dict[str, Any]) -> dict[str, Any]:
     title = _required_str(args, "title")
     lowered = title.lower()
@@ -1305,6 +1595,10 @@ def _plan_validate(state: RepoState, _: dict[str, Any]) -> dict[str, Any]:
     errors.extend(fm_errors)
     if files and not fm_errors:
         errors.extend(module.validate_references(id_to_path, fm_by_path))
+    for rel, text in state.index.document_texts.items():
+        markers = _placeholder_markers_in_text(text)
+        if markers:
+            errors.append(f"{rel}: placeholder markers detected {markers}")
 
     return {
         "valid": len(errors) == 0,
@@ -2278,6 +2572,105 @@ def _slice_text(text: str, start_line: int, end_line: int) -> str:
     return "\n".join(lines[start:end]).strip()
 
 
+def _find_heading_by_section_id(doc: Any, section_id: str) -> Any | None:
+    sid = section_id.strip().lower()
+    for heading in getattr(doc, "headings", []):
+        anchor = str(getattr(heading, "anchor_id", "")).strip().lower()
+        title = str(getattr(heading, "heading", "")).strip().lower()
+        if sid in {anchor, title, title.replace(" ", "-")}:
+            return heading
+    return None
+
+
+def _doc_patch_constraints(path: str) -> dict[str, Any]:
+    if "/tasks/" in path:
+        return {
+            "allowed_in_build_mode": ["Implementation Result", "Verification Result"],
+            "forbidden_ops": [],
+        }
+    if path.startswith(".context/project/architecture/"):
+        return {
+            "allowed_in_build_mode": [],
+            "forbidden_ops": [],
+        }
+    if path.startswith(".context/project/intents/"):
+        return {
+            "allowed_in_build_mode": [],
+            "forbidden_ops": [],
+        }
+    if path.startswith(".context/project/plan.md"):
+        return {
+            "allowed_in_build_mode": [],
+            "forbidden_ops": [],
+        }
+    return {
+        "allowed_in_build_mode": [],
+        "forbidden_ops": [],
+    }
+
+
+def _enforce_doc_patch_scope(mode: str, path: str, heading: str) -> None:
+    if mode != "build":
+        return
+    constraints = _doc_patch_constraints(path)
+    allowed = constraints.get("allowed_in_build_mode", [])
+    if not isinstance(allowed, list):
+        allowed = []
+    if heading not in allowed:
+        raise ToolError(
+            "design_change_requires_plan",
+            "build mode cannot edit this section",
+            {"path": path, "heading": heading, "mode": mode},
+        )
+
+
+def _replace_heading_block(markdown_text: str, heading: str, content: str) -> str:
+    lines = markdown_text.splitlines()
+    marker = f"## {heading}"
+    heading_idx = -1
+    for idx, raw in enumerate(lines):
+        if raw.strip() == marker:
+            heading_idx = idx
+            break
+    if heading_idx < 0:
+        raise ToolError(
+            "target_heading_not_found",
+            "target heading missing",
+            {"heading": heading},
+        )
+    end_idx = len(lines)
+    for idx in range(heading_idx + 1, len(lines)):
+        if lines[idx].startswith("## "):
+            end_idx = idx
+            break
+    body = content.rstrip("\n")
+    replacement = [marker]
+    if body:
+        replacement.extend(body.splitlines())
+    result = lines[:heading_idx] + replacement + lines[end_idx:]
+    return "\n".join(result) + "\n"
+
+
+def _placeholder_markers_in_text(text: str) -> list[str]:
+    lowered = text.lower()
+    patterns = ("todo", "tbd", "placeholder", "auto-generated")
+    found: list[str] = []
+    for marker in patterns:
+        if marker in lowered:
+            found.append(marker)
+    return found
+
+
+def _validate_pack_v3(pack: dict[str, Any]) -> None:
+    version = str(pack.get("pack_version", "")).strip()
+    if version != "3":
+        raise ToolError(
+            "pack_required",
+            "build tools require pack version 3",
+            {"pack_version": version or "(missing)"},
+        )
+
+
 def _required_str(args: dict[str, Any], key: str) -> str:
     value = args.get(key)
     if not isinstance(value, str) or not value.strip():
@@ -2403,6 +2796,16 @@ def _load_task_required_headings(raw: dict[str, Any]) -> tuple[str, ...]:
 
 
 def _ensure_task_readiness_for_pack(state: RepoState, task_id: str) -> None:
+    task_path = state.index.task_index.get(task_id)
+    if task_path:
+        text = state.index.document_texts.get(task_path, "")
+        markers = _placeholder_markers_in_text(text)
+        if markers:
+            raise ToolError(
+                "placeholder_detected",
+                "task contains placeholder markers",
+                {"task_id": task_id, "markers": markers},
+            )
     missing = _task_pack_readiness_missing(state, task_id)
     if "task_not_found" in missing:
         raise ToolError(

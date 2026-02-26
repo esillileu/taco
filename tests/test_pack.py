@@ -260,8 +260,13 @@ def test_build_task_pack_matches_golden_shape() -> None:
     assert set(result.keys()) == {
         "pack_version",
         "task_id",
+        "execution_intent",
         "budget_tokens",
         "used_tokens",
+        "scope_boundary",
+        "reference_slices",
+        "verification_criteria",
+        "required_outputs",
         "next_actions",
         "acceptance_checks",
         "verification_commands",

@@ -89,6 +89,35 @@ def map_cli_to_tool(
             "path": _required_str(options, "path"),
             "anchor_id": _required_str(options, "anchor_id"),
         }
+    if domain == "doc" and action == "section.get":
+        return "doc.section.get", {
+            "path": _required_str(options, "path"),
+            "section_id": _required_str(options, "section_id"),
+        }
+    if domain == "doc" and action == "section.patch":
+        patch_payload: dict[str, Any] = {
+            "path": _required_str(options, "path"),
+            "section_id": _required_str(options, "section_id"),
+            "base_fingerprint": _required_str(options, "base_fingerprint"),
+        }
+        ops = options.get("ops")
+        if not isinstance(ops, list):
+            raise CliError(
+                "invalid_option",
+                "ops must be a list",
+                {"key": "ops"},
+            )
+        patch_payload["ops"] = ops
+        dry_run = options.get("dry_run")
+        if dry_run is not None:
+            if not isinstance(dry_run, bool):
+                raise CliError(
+                    "invalid_option",
+                    "dry_run must be boolean",
+                    {"key": "dry_run"},
+                )
+            patch_payload["dry_run"] = dry_run
+        return "doc.section.patch", patch_payload
     if domain == "issue" and action == "triage":
         return "issue.triage", {"title": _required_str(options, "title")}
     if domain == "convention" and action == "get":
@@ -123,67 +152,33 @@ def map_cli_to_tool(
                 )
             payload["budget_tokens"] = budget_tokens
         return "plan.intent.index", payload
-    if domain == "plan" and action == "intent.propose":
-        payload = {
-            "intent_id": _required_str(options, "intent_id"),
-            "intent_text": _required_str(options, "intent_text"),
-        }
-        title = options.get("title")
-        if title is not None:
-            if not isinstance(title, str):
-                raise CliError(
-                    "invalid_option",
-                    "title must be a string",
-                    {"key": "title"},
-                )
-            payload["title"] = title.strip()
-        return "plan.intent.propose", payload
-    if domain == "plan" and action == "intent.autodesign":
-        return "plan.intent.autodesign", {
+    if domain == "plan" and action == "intent.validate":
+        return "plan.intent.validate", {
             "intent_id": _required_str(options, "intent_id")
         }
-    if domain == "plan" and action == "intent.generate-tasks":
-        return "plan.intent.generate_tasks", {
-            "intent_id": _required_str(options, "intent_id")
-        }
-    if domain == "plan" and action == "intent.review-bundle":
-        review_payload: dict[str, Any] = {
-            "intent_id": _required_str(options, "intent_id")
-        }
-        retry_on_fail = options.get("retry_on_fail")
-        if retry_on_fail is not None:
-            if not isinstance(retry_on_fail, int):
-                raise CliError(
-                    "invalid_option",
-                    "retry_on_fail must be an integer",
-                    {"key": "retry_on_fail"},
-                )
-            review_payload["retry_on_fail"] = retry_on_fail
-        return "plan.intent.review_bundle", review_payload
-    if domain == "plan" and action == "intent.apply":
-        apply_payload: dict[str, Any] = {
-            "intent_id": _required_str(options, "intent_id"),
-            "fingerprint": _required_str(options, "fingerprint"),
-        }
-        retry_on_fail = options.get("retry_on_fail")
-        if retry_on_fail is not None:
-            if not isinstance(retry_on_fail, int):
-                raise CliError(
-                    "invalid_option",
-                    "retry_on_fail must be an integer",
-                    {"key": "retry_on_fail"},
-                )
-            apply_payload["retry_on_fail"] = retry_on_fail
-        dry_run = options.get("dry_run")
-        if dry_run is not None:
-            if not isinstance(dry_run, bool):
-                raise CliError(
-                    "invalid_option",
-                    "dry_run must be boolean",
-                    {"key": "dry_run"},
-                )
-            apply_payload["dry_run"] = dry_run
-        return "plan.intent.apply", apply_payload
+    if domain == "build" and action == "precheck":
+        pack = options.get("pack")
+        if not isinstance(pack, dict):
+            raise CliError(
+                "invalid_option",
+                "pack must be an object",
+                {"key": "pack"},
+            )
+        return "build.precheck", {"pack": pack}
+    if domain == "build" and action == "postcheck":
+        pack = options.get("pack")
+        if not isinstance(pack, dict):
+            raise CliError(
+                "invalid_option",
+                "pack must be an object",
+                {"key": "pack"},
+            )
+        payload = {"pack": pack}
+        for key in ("changed_paths", "produced_outputs", "check_results"):
+            value = options.get(key)
+            if value is not None:
+                payload[key] = value
+        return "build.postcheck", payload
     if domain == "plan" and action == "locate":
         locate_payload: dict[str, Any] = {
             "change_type": _required_str(options, "change_type"),

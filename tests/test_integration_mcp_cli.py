@@ -234,40 +234,9 @@ def test_integration_happy_path_for_all_tools(tmp_path: Path) -> None:
     assert call_tool(state, "plan.intent.list", {})["ok"] is True
     assert call_tool(state, "plan.intent.view", {"intent_id": "I-001"})["ok"] is True
     assert call_tool(state, "plan.intent.index", {"intent_id": "I-001"})["ok"] is True
-    assert call_tool(
-        state,
-        "plan.intent.propose",
-        {
-            "intent_id": "I-010",
-            "intent_text": "improve deterministic planning flow",
-            "title": "planning flow",
-        },
-    )["ok"] is True
-    assert call_tool(
-        state, "plan.intent.autodesign", {"intent_id": "I-001"}
-    )["ok"] is True
-    assert call_tool(
-        state, "plan.intent.generate_tasks", {"intent_id": "I-001"}
-    )["ok"] is True
-    assert call_tool(
-        state, "plan.intent.review_bundle", {"intent_id": "I-001"}
-    )["ok"] is True
-    bundle_retry = call_tool(
-        state,
-        "plan.intent.review_bundle",
-        {"intent_id": "I-001", "retry_on_fail": 1},
+    assert (
+        call_tool(state, "plan.intent.validate", {"intent_id": "I-001"})["ok"] is True
     )
-    assert bundle_retry["ok"] is True
-    assert call_tool(
-        state,
-        "plan.intent.apply",
-        {
-            "intent_id": "I-001",
-            "fingerprint": bundle_retry["data"]["decision_fingerprint"],
-            "retry_on_fail": 1,
-            "dry_run": True,
-        },
-    )["ok"] is True
     assert call_tool(
         state,
         "task.targets",
@@ -309,6 +278,17 @@ def test_integration_happy_path_for_all_tools(tmp_path: Path) -> None:
         state,
         "doc.snippet",
         {"path": "docs/architecture.md", "anchor_id": "system"},
+    )["ok"] is True
+    section = call_tool(
+        state,
+        "doc.section.get",
+        {"path": "docs/dev/tasks/T-006-integration-tests.md", "section_id": "goal"},
+    )
+    assert section["ok"] is True
+    assert call_tool(
+        state,
+        "build.precheck",
+        {"pack": call_tool(state, "task.pack", {"task_id": "T-006"})["data"]},
     )["ok"] is True
     assert call_tool(
         state, "issue.triage", {"title": "fix broken target"}
@@ -420,77 +400,10 @@ def test_cli_mapping_parity_with_mcp_calls(tmp_path: Path) -> None:
     assert cli_result == mcp_result
 
     tool_name, payload = map_cli_to_tool(
-        "plan",
-        "intent.propose",
-        {
-            "intent_id": "I-010",
-            "intent_text": "improve deterministic planning flow",
-            "title": "planning flow",
-        },
+        "plan", "intent.validate", {"intent_id": "I-001"}
     )
     cli_result = call_tool(state, tool_name, payload)
-    mcp_result = call_tool(
-        state,
-        "plan.intent.propose",
-        {
-            "intent_id": "I-010",
-            "intent_text": "improve deterministic planning flow",
-            "title": "planning flow",
-        },
-    )
-    assert cli_result == mcp_result
-
-    tool_name, payload = map_cli_to_tool(
-        "plan", "intent.autodesign", {"intent_id": "I-001"}
-    )
-    cli_result = call_tool(state, tool_name, payload)
-    mcp_result = call_tool(state, "plan.intent.autodesign", {"intent_id": "I-001"})
-    assert cli_result == mcp_result
-
-    tool_name, payload = map_cli_to_tool(
-        "plan", "intent.generate-tasks", {"intent_id": "I-001"}
-    )
-    cli_result = call_tool(state, tool_name, payload)
-    mcp_result = call_tool(state, "plan.intent.generate_tasks", {"intent_id": "I-001"})
-    assert cli_result == mcp_result
-
-    tool_name, payload = map_cli_to_tool(
-        "plan", "intent.review-bundle", {"intent_id": "I-001"}
-    )
-    cli_result = call_tool(state, tool_name, payload)
-    mcp_result = call_tool(state, "plan.intent.review_bundle", {"intent_id": "I-001"})
-    assert cli_result == mcp_result
-
-    tool_name, payload = map_cli_to_tool(
-        "plan", "intent.review-bundle", {"intent_id": "I-001", "retry_on_fail": 1}
-    )
-    cli_result = call_tool(state, tool_name, payload)
-    mcp_result = call_tool(
-        state, "plan.intent.review_bundle", {"intent_id": "I-001", "retry_on_fail": 1}
-    )
-    assert cli_result == mcp_result
-
-    tool_name, payload = map_cli_to_tool(
-        "plan",
-        "intent.apply",
-        {
-            "intent_id": "I-001",
-            "fingerprint": cli_result["data"]["decision_fingerprint"],
-            "retry_on_fail": 1,
-            "dry_run": True,
-        },
-    )
-    cli_result = call_tool(state, tool_name, payload)
-    mcp_result = call_tool(
-        state,
-        "plan.intent.apply",
-        {
-            "intent_id": "I-001",
-            "fingerprint": payload["fingerprint"],
-            "retry_on_fail": 1,
-            "dry_run": True,
-        },
-    )
+    mcp_result = call_tool(state, "plan.intent.validate", {"intent_id": "I-001"})
     assert cli_result == mcp_result
 
 

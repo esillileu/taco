@@ -92,8 +92,13 @@ class DroppedSnippet:
 class PackResult:
     pack_version: str
     task_id: str
+    execution_intent: str
     budget_tokens: int
     used_tokens: int
+    scope_boundary: dict[str, tuple[str, ...]]
+    reference_slices: tuple[dict[str, str], ...]
+    verification_criteria: tuple[str, ...]
+    required_outputs: tuple[str, ...]
     next_actions: tuple[str, ...]
     acceptance_checks: tuple[str, ...]
     verification_commands: tuple[str, ...]
@@ -107,8 +112,16 @@ class PackResult:
         return {
             "pack_version": self.pack_version,
             "task_id": self.task_id,
+            "execution_intent": self.execution_intent,
             "budget_tokens": self.budget_tokens,
             "used_tokens": self.used_tokens,
+            "scope_boundary": {
+                "allowed_paths": list(self.scope_boundary["allowed_paths"]),
+                "forbidden_paths": list(self.scope_boundary["forbidden_paths"]),
+            },
+            "reference_slices": [dict(item) for item in self.reference_slices],
+            "verification_criteria": list(self.verification_criteria),
+            "required_outputs": list(self.required_outputs),
             "next_actions": list(self.next_actions),
             "acceptance_checks": list(self.acceptance_checks),
             "verification_commands": list(self.verification_commands),
@@ -242,12 +255,29 @@ def build_task_pack(
     )
     unknowns = tuple(_collect_action_items(included, "pack.unknowns"))
     write_targets = _derive_write_targets(task_doc)
+    execution_intent = _derive_execution_intent(task_doc.path, index.document_texts)
+    scope_boundary = _derive_scope_boundary(task_doc.path, index.document_texts)
+    reference_slices = _derive_reference_slices(included)
+    required_outputs = tuple(
+        dict.fromkeys(
+            [
+                str(item.get("path", "")).strip()
+                for item in write_targets
+                if isinstance(item, dict) and str(item.get("path", "")).strip()
+            ]
+        )
+    )
 
     return PackResult(
-        pack_version="2",
+        pack_version="3",
         task_id=task_id,
+        execution_intent=execution_intent,
         budget_tokens=budget.default_tokens,
         used_tokens=used_tokens,
+        scope_boundary=scope_boundary,
+        reference_slices=reference_slices,
+        verification_criteria=tuple(acceptance_checks),
+        required_outputs=required_outputs,
         next_actions=tuple(next_actions),
         acceptance_checks=tuple(acceptance_checks),
         verification_commands=tuple(verification_commands),
@@ -576,3 +606,66 @@ def _derive_write_targets(
             }
         )
     return tuple(targets)
+
+
+def _derive_execution_intent(task_path: str, document_texts: dict[str, str]) -> str:
+    text = document_texts.get(task_path, "")
+    lines = text.splitlines()
+    in_goal = False
+    for raw in lines:
+        line = raw.strip()
+        if line == "## Goal":
+            in_goal = True
+            continue
+        if in_goal and line.startswith("## "):
+            break
+        if in_goal and line.startswith("- "):
+            return line[2:].strip()
+    return "Execute task scope and verification criteria deterministically."
+
+
+def _derive_scope_boundary(
+    task_path: str, document_texts: dict[str, str]
+) -> dict[str, tuple[str, ...]]:
+    text = document_texts.get(task_path, "")
+    fm = _extract_front_matter(text)
+    scope = fm.get("scope", {})
+    if not isinstance(scope, dict):
+        return {"allowed_paths": (), "forbidden_paths": ()}
+    allowed = tuple(
+        dict.fromkeys(
+            item.strip()
+            for item in scope.get("in", [])
+            if isinstance(item, str) and item.strip()
+        )
+    )
+    forbidden = tuple(
+        dict.fromkeys(
+            item.strip()
+            for item in scope.get("out", [])
+            if isinstance(item, str) and item.strip()
+        )
+    )
+    return {"allowed_paths": allowed, "forbidden_paths": forbidden}
+
+
+def _derive_reference_slices(
+    snippets: list[PackSnippet],
+) -> tuple[dict[str, str], ...]:
+    rows: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for item in snippets:
+        if not item.group.startswith("ref:"):
+            continue
+        key = f"{item.path}#{item.anchor_id}"
+        if key in seen:
+            continue
+        seen.add(key)
+        rows.append(
+            {
+                "path": item.path,
+                "anchor_id": item.anchor_id,
+                "heading": item.heading,
+            }
+        )
+    return tuple(rows)

@@ -337,84 +337,41 @@ def test_cli_main_plan_intent_list_view_index(tmp_path: Path, capsys) -> None:
     assert index_output["data"]["candidate_tasks"][0]["task_id"] == "T-008"
 
 
-def test_cli_main_plan_intent_automation_tools(tmp_path: Path, capsys) -> None:
+def test_cli_main_plan_intent_validate_and_removed_tools(
+    tmp_path: Path, capsys
+) -> None:
     _write_fixture_repo(tmp_path)
 
-    code_propose = main(
+    code_validate = main(
         [
             "plan",
             "intent",
-            "propose",
-            "--intent-id",
-            "I-010",
-            "--intent-text",
-            "improve planning automation with deterministic task generation",
-        ],
-        cwd=tmp_path,
-    )
-    propose_output = json.loads(capsys.readouterr().out)
-    assert code_propose == 0
-    assert propose_output["ok"] is True
-    assert propose_output["data"]["intent"]["id"] == "I-010"
-
-    code_design = main(
-        ["plan", "intent", "autodesign", "--intent-id", "I-001"], cwd=tmp_path
-    )
-    design_output = json.loads(capsys.readouterr().out)
-    assert code_design == 0
-    assert design_output["ok"] is True
-    assert "quality_gate" in design_output["data"]
-
-    code_tasks = main(
-        ["plan", "intent", "generate-tasks", "--intent-id", "I-001"], cwd=tmp_path
-    )
-    tasks_output = json.loads(capsys.readouterr().out)
-    assert code_tasks == 0
-    assert tasks_output["ok"] is True
-    assert "quality_gate" in tasks_output["data"]
-
-    code_bundle = main(
-        ["plan", "intent", "review-bundle", "--intent-id", "I-001"], cwd=tmp_path
-    )
-    bundle_output = json.loads(capsys.readouterr().out)
-    assert code_bundle == 0
-    assert bundle_output["ok"] is True
-    assert bundle_output["data"]["quality_gate"]["approval_required"] is True
-
-    code_bundle_retry = main(
-        [
-            "plan",
-            "intent",
-            "review-bundle",
+            "validate",
             "--intent-id",
             "I-001",
-            "--retry-on-fail",
-            "1",
         ],
         cwd=tmp_path,
     )
-    bundle_retry_output = json.loads(capsys.readouterr().out)
-    assert code_bundle_retry == 0
-    assert bundle_retry_output["ok"] is True
+    validate_output = json.loads(capsys.readouterr().out)
+    assert code_validate == 0
+    assert validate_output["ok"] is True
+    assert validate_output["data"]["intent_id"] == "I-001"
 
-    code_apply = main(
+    code_section_get = main(
         [
-            "plan",
-            "intent",
-            "apply",
-            "--intent-id",
-            "I-001",
-            "--fingerprint",
-            bundle_retry_output["data"]["decision_fingerprint"],
-            "--retry-on-fail",
-            "1",
+            "doc",
+            "section",
+            "get",
+            "--path",
+            "docs/dev/tasks/T-008-cli-entrypoint.md",
+            "--section-id",
+            "verification-result",
         ],
         cwd=tmp_path,
     )
-    apply_output = json.loads(capsys.readouterr().out)
-    assert code_apply == 0
-    assert apply_output["ok"] is True
-    assert apply_output["data"]["applied"] is False
+    section_output = json.loads(capsys.readouterr().out)
+    assert code_section_get == 0
+    assert section_output["ok"] is True
 
 
 def test_cli_main_returns_error_code_for_invalid_input(tmp_path: Path, capsys) -> None:

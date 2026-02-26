@@ -441,62 +441,11 @@ def test_task_list_and_pack_and_targets(tmp_path: Path) -> None:
     assert plan_intent_indexed["ok"] is True
     assert plan_intent_indexed["data"]["intent"]["id"] == "I-001"
     assert plan_intent_indexed["data"]["candidate_tasks"][0]["task_id"] == "T-005"
-    proposed = call_tool(
-        state,
-        "plan.intent.propose",
-        {
-            "intent_id": "I-010",
-            "intent_text": "improve deterministic planning flow",
-            "title": "planning flow",
-        },
-    )
-    assert proposed["ok"] is True
-    assert proposed["data"]["intent"]["id"] == "I-010"
-    auto = call_tool(state, "plan.intent.autodesign", {"intent_id": "I-001"})
-    assert auto["ok"] is True
-    assert "proposed_updates" in auto["data"]
-    generated = call_tool(state, "plan.intent.generate_tasks", {"intent_id": "I-001"})
-    assert generated["ok"] is True
-    assert "quality_gate" in generated["data"]
-    for item in generated["data"]["generated_tasks"]:
-        assert item["title"].startswith(f"{item['task_id']}-")
-    bundle = call_tool(state, "plan.intent.review_bundle", {"intent_id": "I-001"})
-    assert bundle["ok"] is True
-    assert bundle["data"]["quality_gate"]["approval_required"] is True
-    bundle_retry = call_tool(
-        state,
-        "plan.intent.review_bundle",
-        {"intent_id": "I-001", "retry_on_fail": 1},
-    )
-    assert bundle_retry["ok"] is True
-    assert bundle_retry["data"]["retry"]["requested"] == 1
-    fingerprint = bundle_retry["data"]["decision_fingerprint"]
-    apply_preview = call_tool(
-        state,
-        "plan.intent.apply",
-        {
-            "intent_id": "I-001",
-            "fingerprint": fingerprint,
-            "retry_on_fail": 1,
-            "dry_run": True,
-        },
-    )
-    assert apply_preview["ok"] is True
-    assert apply_preview["data"]["applied"] is False
-    create_writes = [
-        item
-        for item in apply_preview["data"]["writes"]
-        if item["action"] == "create_task"
-    ]
-    assert create_writes
-    assert all(item["path"].startswith("docs/dev/tasks/") for item in create_writes)
-    review_writes = [
-        item
-        for item in apply_preview["data"]["writes"]
-        if item["action"] == "write_review_record"
-    ]
-    assert review_writes
-    assert review_writes[0]["path"].startswith("docs/intents/reviews/")
+    validated = call_tool(state, "plan.intent.validate", {"intent_id": "I-001"})
+    assert validated["ok"] is True
+    removed = call_tool(state, "plan.intent.generate_tasks", {"intent_id": "I-001"})
+    assert removed["ok"] is False
+    assert removed["error"]["code"] == "removed_tool"
 
     target = call_tool(
         state,
@@ -515,13 +464,8 @@ def test_plan_intent_index_reports_refactor_analysis(tmp_path: Path) -> None:
     assert analysis["required"] is True
     assert analysis["completed"] is True
     assert analysis["oversized_file_count"] >= 1
-    generated = call_tool(state, "plan.intent.generate_tasks", {"intent_id": "I-020"})
-    assert generated["ok"] is True
-    assert generated["data"]["analysis"]["required"] is True
-    assert any(
-        "split-oversized-py" in row["title"]
-        for row in generated["data"]["generated_tasks"]
-    )
+    validated = call_tool(state, "plan.intent.validate", {"intent_id": "I-020"})
+    assert validated["ok"] is True
 
 
 def test_doc_snippet_issue_triage_and_convention(tmp_path: Path) -> None:
@@ -564,6 +508,50 @@ def test_doc_snippet_issue_triage_and_convention(tmp_path: Path) -> None:
     plan_validate = call_tool(state, "plan.validate", {})
     assert plan_validate["ok"] is True
     assert "valid" in plan_validate["data"]
+
+
+def test_doc_section_patch_and_build_checks(tmp_path: Path) -> None:
+    state = _state(tmp_path)
+    task_path = state.index.task_index["T-005"]
+    section = call_tool(
+        state,
+        "doc.section.get",
+        {
+            "path": task_path,
+            "section_id": "implementation-result",
+        },
+    )
+    assert section["ok"] is True
+    patched = call_tool(
+        state,
+        "doc.section.patch",
+        {
+            "path": task_path,
+            "section_id": "implementation-result",
+            "base_fingerprint": section["data"]["fingerprint"],
+            "ops": [{"op": "append_list_item", "text": "updated from test"}],
+            "dry_run": True,
+            "mode": "build",
+        },
+    )
+    assert patched["ok"] is False
+    assert patched["error"]["code"] == "doc_not_found"
+
+    packed = call_tool(state, "task.pack", {"task_id": "T-005"})
+    assert packed["ok"] is True
+    pre = call_tool(state, "build.precheck", {"pack": packed["data"]})
+    assert pre["ok"] is True
+    post = call_tool(
+        state,
+        "build.postcheck",
+        {
+            "pack": packed["data"],
+            "changed_paths": [],
+            "produced_outputs": [task_path],
+            "check_results": {"tests": True},
+        },
+    )
+    assert post["ok"] is True
 
 
 def test_task_record_dry_run_preview(tmp_path: Path) -> None:
@@ -690,11 +678,7 @@ def test_task_pack_fails_when_readiness_requirements_missing(tmp_path: Path) -> 
     state = load_repo_state(tmp_path)
     packed = call_tool(state, "task.pack", {"task_id": "T-099"})
     assert packed["ok"] is False
-    assert packed["error"]["code"] == "task_not_ready"
-    missing = packed["error"]["details"]["missing_requirements"]
-    assert "scope.out" in missing
-    assert "references.modules" in missing
-    assert "verification.criteria" in missing
+    assert packed["error"]["code"] == "placeholder_detected"
 
 
 def test_load_repo_state_from_config(tmp_path: Path) -> None:
