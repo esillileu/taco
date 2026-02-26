@@ -1,0 +1,41 @@
+from taco.core.indexing import (
+    LINK_RE,
+    TASK_ID_RE,
+    DocumentInput,
+    HeadingRef,
+    IndexConfig,
+    IndexedDocument,
+    IndexerError,
+    IndexGraph,
+    build_index,
+    load_documents,
+    scan_markdown_files,
+)
+from taco.core.packing import (
+    BudgetConfig,
+    DroppedSnippet,
+    PackError,
+    PackResult,
+    PackSnippet,
+    build_task_pack,
+)
+
+__all__ = [
+    "TASK_ID_RE",
+    "LINK_RE",
+    "DocumentInput",
+    "HeadingRef",
+    "IndexConfig",
+    "IndexedDocument",
+    "IndexerError",
+    "IndexGraph",
+    "build_index",
+    "load_documents",
+    "scan_markdown_files",
+    "BudgetConfig",
+    "DroppedSnippet",
+    "PackError",
+    "PackResult",
+    "PackSnippet",
+    "build_task_pack",
+]

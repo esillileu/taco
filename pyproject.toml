@@ -12,7 +12,7 @@ authors = [{ name = "TACO Contributors" }]
 dependencies = []
 
 [project.scripts]
-taco = "taco.main:main"
+taco = "taco.apps.cli.main:main"
 
 [project.optional-dependencies]
 dev = [

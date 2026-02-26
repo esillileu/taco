@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 
-from taco.indexer import HeadingRef, IndexGraph
+from taco.core.indexing import HeadingRef, IndexGraph
+from taco.core.routing.policy import ROUTE_HEADING_MAP, ROUTE_MODE_MAP
 
 
 @dataclass(frozen=True)
@@ -13,20 +14,8 @@ class RouterConfig:
     @classmethod
     def default(cls) -> RouterConfig:
         return cls(
-            heading_map={
-                "implementation_result": "Implementation Result",
-                "implementation": "Implementation Result",
-                "verification_result": "Verification Result",
-                "verification": "Verification Result",
-                "issue_record": "Verification Result",
-            },
-            mode_map={
-                "implementation_result": "append_implementation",
-                "implementation": "append_implementation",
-                "verification_result": "append_verification",
-                "verification": "append_verification",
-                "issue_record": "append_issue",
-            },
+            heading_map=dict(ROUTE_HEADING_MAP),
+            mode_map=dict(ROUTE_MODE_MAP),
         )
 
     @classmethod
