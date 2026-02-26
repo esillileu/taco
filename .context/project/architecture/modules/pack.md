@@ -32,7 +32,8 @@ Assembles one-task execution context using required references and minimal gover
 
 ## Contracts
 
-- Required references: `common_required_refs + task.references + task.plan_ref`.
+- Required references: `required_refs_by_tool[tool] + task.references + task.plan_ref`.
+- Compatibility fallback: when tool-specific refs are absent, runtime may fallback to legacy `common_required_refs`.
 - Missing required context fails with `pack_not_ready`.
 - Optional context can be dropped by budget with explicit reason.
 

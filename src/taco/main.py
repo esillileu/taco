@@ -63,6 +63,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     plan_parser = domain_subparsers.add_parser("plan")
     plan_sub = plan_parser.add_subparsers(dest="action", required=True)
+    plan_pack = plan_sub.add_parser("pack")
+    plan_pack.add_argument("--task-id", required=True)
+    plan_pack.add_argument("--budget-tokens", type=int, default=None)
     plan_sub.add_parser("view")
     plan_locate = plan_sub.add_parser("locate")
     plan_locate.add_argument("--change-type", required=True)
