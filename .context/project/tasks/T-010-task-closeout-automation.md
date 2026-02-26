@@ -89,10 +89,10 @@ links:
 
 ## Implementation Result
 
-- Pending (do not fill until the task is completed)
+- Implemented closeout automation via `task.complete` with dry-run/apply flow.
+- Added deterministic task/plan status update behavior for closeout progression.
 
-- closeout automation implemented
 ## Verification Result
 
-- Pending (do not fill until the task is completed)
-- automated checks passed
+- Verified closeout dry-run/apply behavior and repeated-closeout guard path.
+- Project checks passed (`ruff`, `mypy`, `pytest`, `validate_docs`).

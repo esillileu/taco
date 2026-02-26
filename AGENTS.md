@@ -2,9 +2,9 @@
 
 ## Loader-first behavior
 
-- Always call `task.pack` before coding.
-- Use `task.targets` before writing completion notes.
-- Do not read large docs directly when a snippet is sufficient; call `doc.snippet`.
+- Always call `uv run taco task pack --task-id <TASK_ID>` before coding.
+- Use `uv run taco task targets --task-id <TASK_ID> --route-type <ROUTE_TYPE>` before writing completion notes.
+- Do not read large docs directly when a snippet is sufficient; call `uv run taco doc snippet --path <PATH> --anchor-id <ANCHOR_ID>`.
 
 ## Recording behavior
 

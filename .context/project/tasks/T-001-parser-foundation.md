@@ -2,7 +2,7 @@
 id: T-001
 type: task
 title: T-001-parser-foundation
-status: todo
+status: done
 plan_ref: PLAN-MAIN
 priority: p1
 estimate: m

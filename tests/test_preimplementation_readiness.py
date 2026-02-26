@@ -59,9 +59,14 @@ def test_dogfooding_policy_is_explicitly_documented() -> None:
 
 def test_agents_loader_first_names_are_current() -> None:
     agents = _read("AGENTS.md")
-    assert "`task.pack`" in agents
-    assert "`task.targets`" in agents
-    assert "`doc.snippet`" in agents
+    assert "`uv run taco task pack --task-id <TASK_ID>`" in agents
+    assert (
+        "`uv run taco task targets --task-id <TASK_ID> --route-type <ROUTE_TYPE>`"
+        in agents
+    )
+    assert (
+        "`uv run taco doc snippet --path <PATH> --anchor-id <ANCHOR_ID>`" in agents
+    )
 
 
 def _task_slug(task_id: int) -> str:

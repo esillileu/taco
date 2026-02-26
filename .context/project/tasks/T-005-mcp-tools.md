@@ -2,7 +2,7 @@
 id: T-005
 type: task
 title: T-005-mcp-tools
-status: todo
+status: done
 plan_ref: PLAN-MAIN
 priority: p1
 estimate: m

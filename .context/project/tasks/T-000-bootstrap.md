@@ -2,7 +2,7 @@
 id: T-000
 type: task
 title: T-000-bootstrap
-status: todo
+status: done
 plan_ref: PLAN-MAIN
 priority: p1
 estimate: m

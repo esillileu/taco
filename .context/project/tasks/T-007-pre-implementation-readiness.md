@@ -2,7 +2,7 @@
 id: T-007
 type: task
 title: T-007-pre-implementation-readiness
-status: todo
+status: done
 plan_ref: PLAN-MAIN
 priority: p1
 estimate: m

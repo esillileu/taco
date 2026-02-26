@@ -95,12 +95,9 @@ links:
 
 ## Implementation Result
 
-- Pending (do not fill until the task is completed)
-
-- Implemented build->plan fallback with new task.block flow, reason-code validation, blocked status transition, and plan blocked_tasks synchronization
-- fallback flow implemented
+- Implemented build->plan fallback via `task.block` flow with reason-code validation.
+- Added blocked status transition and `plan.blocked_tasks` synchronization behavior.
 ## Verification Result
 
-- Pending (do not fill until the task is completed)
-- Validated via CLI dry-run/error paths and full ruff+mypy+pytest+doc-validation pass; added integration and unit coverage for block behavior
-- tooling and tests passed
+- Validated CLI dry-run/error paths and blocked transition constraints.
+- Added unit/integration coverage for block behavior; checks passed (`ruff`, `mypy`, `pytest`, `validate_docs`).

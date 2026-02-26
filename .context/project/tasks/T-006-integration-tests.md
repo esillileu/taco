@@ -2,7 +2,7 @@
 id: T-006
 type: task
 title: T-006-integration-tests
-status: todo
+status: done
 plan_ref: PLAN-MAIN
 priority: p1
 estimate: m

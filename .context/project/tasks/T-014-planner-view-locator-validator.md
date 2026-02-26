@@ -100,11 +100,9 @@ links:
 
 ## Implementation Result
 
-- Pending (do not fill until the task is completed)
-
-- Added planner tool surface: plan.view, plan.locate, plan.validate with CLI parity and deterministic summaries/candidate ordering
-- planner surface implemented
+- Added planner tool surface: `plan.view`, `plan.locate`, `plan.validate`.
+- Kept CLI parity and deterministic summary/candidate ordering for planner outputs.
 ## Verification Result
 
-- Pending (do not fill until the task is completed)
-- checks and dogfooding passed
+- Verified planner command paths and envelope behavior through tests and dogfooding.
+- Checks passed (`ruff`, `mypy`, `pytest`, `validate_docs`).

@@ -2,7 +2,7 @@
 id: T-003
 type: task
 title: T-003-pack-budget
-status: todo
+status: done
 plan_ref: PLAN-MAIN
 priority: p1
 estimate: m

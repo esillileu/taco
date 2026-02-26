@@ -2,7 +2,7 @@
 id: T-008
 type: task
 title: T-008-cli-entrypoint
-status: todo
+status: done
 plan_ref: PLAN-MAIN
 priority: p1
 estimate: m

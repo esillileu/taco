@@ -2,7 +2,7 @@
 id: T-004
 type: task
 title: T-004-write-target-router
-status: todo
+status: done
 plan_ref: PLAN-MAIN
 priority: p1
 estimate: m

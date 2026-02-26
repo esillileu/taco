@@ -2,7 +2,7 @@
 id: T-002
 type: task
 title: T-002-indexer-foundation
-status: todo
+status: done
 plan_ref: PLAN-MAIN
 priority: p1
 estimate: m
