@@ -69,6 +69,7 @@ links:
 Architecture anchor for modules, flows, and schemas. This document is global SSOT for boundaries and dependency direction.
 
 - Runtime strategy: Python-first delivery with Rust-final runtime target.
+- design-sync: I-038 test-suite srp refactor phase2 synchronized via FLOW-MODE-TRANSITION updates.
 
 ## System Boundary
 <!-- taco:ref=ARCH-BOUNDARY-001 -->

@@ -48,6 +48,7 @@ def _advance_plan_for_completed_task(
     ]
 
     active_clean = [item for item in active_clean if item != completed_task_id]
+    blocked_clean = [item for item in blocked_clean if item != completed_task_id]
     next_clean = [item for item in next_clean if item != completed_task_id]
     promoted: str | None = None
     remaining_next: list[str] = []
@@ -146,4 +147,3 @@ def _advance_plan_for_blocked_task(
         next_tasks=remaining_next,
     )
     return _compose_front_matter(meta, next_body), promoted
-

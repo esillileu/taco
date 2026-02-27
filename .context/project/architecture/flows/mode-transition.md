@@ -33,6 +33,8 @@ intent_refs:
 - I-034
 - I-035
 - I-036
+- I-037
+- I-038
 links:
 - PLAN-MAIN
 - ARCH-INDEX
@@ -125,3 +127,4 @@ Switch back to plan mode when execution discovers:
 - Writers operate in plan mode with view/locator/validator support.
 - Builders operate in build mode with task bundle only.
 - Mode separation prevents uncontrolled document drift during coding execution.
+- design-sync: FLOW-MODE-TRANSITION intent_refs includes I-038 for test-suite srp refactor phase2 closeout.

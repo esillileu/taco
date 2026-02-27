@@ -4,14 +4,13 @@ from pathlib import Path
 
 import yaml
 
-from ..fixtures.repo_snippets import task_doc_t006, test_repo_config
+from ..fixtures.repo_snippets import task_doc_t008, test_repo_config
 
 
 def write_fixture_repo(root: Path) -> None:
     (root / "docs" / "dev" / "tasks").mkdir(parents=True)
-    (root / "docs" / "dev" / "git").mkdir(parents=True)
     (root / "docs" / "intents").mkdir(parents=True)
-
+    (root / "docs" / "dev").mkdir(exist_ok=True)
     (root / "docs" / "intent.md").write_text(
         "\n".join(
             [
@@ -55,7 +54,7 @@ def write_fixture_repo(root: Path) -> None:
                 "type: plan",
                 "title: Plan",
                 "status: active",
-                "active_tasks: []",
+                "active_tasks: [T-008]",
                 "blocked_tasks: []",
                 "next_tasks: []",
                 "links: []",
@@ -122,8 +121,8 @@ def write_fixture_repo(root: Path) -> None:
     )
     (root / "docs" / "dev" / "todo.md").write_text("# Todo\n", encoding="utf-8")
     (root / "docs" / "dev" / "git.md").write_text("# Git Rules\n", encoding="utf-8")
-    (root / "docs" / "dev" / "tasks" / "T-006-integration-tests.md").write_text(
-        task_doc_t006(),
+    (root / "docs" / "dev" / "tasks" / "T-008-cli-entrypoint.md").write_text(
+        task_doc_t008(),
         encoding="utf-8",
     )
     (root / "docs" / "intents" / "I-001-plan-mode.md").write_text(
@@ -135,8 +134,8 @@ def write_fixture_repo(root: Path) -> None:
                 "title: plan mode intent",
                 "status: active",
                 "plan_ref: PLAN-MAIN",
-                "task_refs: [T-006]",
-                "links: [PLAN-MAIN, T-006, ARCH-INDEX]",
+                "task_refs: [T-008]",
+                "links: [PLAN-MAIN, T-008, ARCH-INDEX]",
                 "---",
                 "",
                 "# Intent: I-001-plan-mode",
@@ -144,7 +143,6 @@ def write_fixture_repo(root: Path) -> None:
         ),
         encoding="utf-8",
     )
-
     (root / "taco.yaml").write_text(
         yaml.safe_dump(test_repo_config()),
         encoding="utf-8",

@@ -2,7 +2,7 @@
 id: T-026
 type: task
 title: T-026-i-033-intent-modular-srp-refactor-over-200-lines
-status: blocked
+status: done
 plan_ref: PLAN-MAIN
 scope:
   in:
@@ -98,7 +98,10 @@ links:
 
 - - Refactored CLI mapper into responsibility-based modules under src/taco/apps/cli/map (dispatch/task/plan/doc/build/common) while keeping public facade src/taco/apps/cli/mapper.py stable.\n- Split build usecases into focused modules: precheck.py, postcheck.py, diagnostics.py, misc.py and removed oversized build/actions.py.\n- Split MCP runtime responsibilities into catalog.py, protocol.py, handlers.py, runtime.py with main.py as thin entrypoint facade.\n- Synced architecture docs for new module boundaries (cli-mapper/apps/tools-dispatch).
 - blocked: [scope_split_required] Remaining >200-line decomposition targets (core/usecases/plan/intent.py, core/task/pack.py, and large test suites) require separate staged tasks to avoid high-risk mixed refactor in one loop.
+- Restored missing build usecase package (src/taco/core/usecases/build) with precheck/postcheck/diagnostics/misc handlers, reconnected dispatcher imports, and recovered CLI boot path.
+- design-sync: updated .context/project/architecture/modules/tools-dispatch.md
 ## Verification Result
 
 - Plan readiness only. Build verification pending.
 - - uv run ruff check src/taco/apps/cli src/taco/core/usecases/build src/taco/apps/mcp tests/test_cli_main.py tests/test_integration_mcp_cli.py tests/test_tools.py : pass\n- uv run pytest -q tests/test_cli_main.py tests/test_integration_mcp_cli.py tests/test_tools.py : pass\n- uv run python scripts/validate_docs.py : pass\n- uv run pytest -q : pass\n- uv run taco plan validate : pass
+- Validated with uvx ruff check src/taco/core/usecases/build src/taco/core/usecases/dispatcher.py src/taco/apps/cli src/taco/apps/mcp; uv run pytest -q tests/tools/test_plan_doc_build.py tests/integration/test_tool_surface_parity.py tests/cli/test_validation_and_init.py; uv run pytest -q; uv run taco task pack --task-id T-026 --budget-tokens 1800; uv run taco plan validate; uv run python scripts/validate_docs.py
