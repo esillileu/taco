@@ -1,19 +1,33 @@
 from taco.core.usecases.plan.intent import (
     _plan_intent_apply,
     _plan_intent_autodesign,
+    _plan_intent_create_many,
     _plan_intent_generate_tasks,
     _plan_intent_index,
     _plan_intent_list,
     _plan_intent_propose,
     _plan_intent_review_bundle,
+    _plan_intent_submit_many,
+    _plan_intent_template,
     _plan_intent_validate,
     _plan_intent_view,
 )
 from taco.core.usecases.plan.views import _plan_locate, _plan_validate, _plan_view
+from taco.core.usecases.plan.workflow import (
+    _plan_design_submit_changes,
+    _plan_mode_guide,
+    _plan_task_frontmatter_sync,
+    _plan_task_lint,
+    _plan_task_submit_many,
+    _plan_task_template,
+)
 
 __all__ = [
     "_plan_intent_index",
     "_plan_intent_list",
+    "_plan_intent_template",
+    "_plan_intent_create_many",
+    "_plan_intent_submit_many",
     "_plan_intent_propose",
     "_plan_intent_autodesign",
     "_plan_intent_generate_tasks",
@@ -24,4 +38,10 @@ __all__ = [
     "_plan_locate",
     "_plan_validate",
     "_plan_view",
+    "_plan_mode_guide",
+    "_plan_design_submit_changes",
+    "_plan_task_submit_many",
+    "_plan_task_template",
+    "_plan_task_frontmatter_sync",
+    "_plan_task_lint",
 ]

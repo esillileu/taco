@@ -97,7 +97,7 @@ def test_cli_main_plan_intent_validate_and_automation_flow(
     assert review_output["ok"] is True
     assert review_output["data"]["status"] == "fail"
     issue_codes = {row["code"] for row in review_output["data"]["issues"]}
-    assert "task_blueprint_not_authored" in issue_codes
+    assert "task_lint_failed" in issue_codes
 
     code_apply_missing_approval = main(
         [
@@ -149,4 +149,3 @@ def test_cli_main_plan_intent_validate_and_automation_flow(
     section_output = json.loads(capsys.readouterr().out)
     assert code_section_get == 0
     assert section_output["ok"] is True
-

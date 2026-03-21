@@ -1,0 +1,4 @@
+[build 1/3] Rebind MCP server 'taco' to uroboros directory
+Name  Command  Args                                                                                                      Env  Cwd  Status   Auth       
+taco  bash     -lc cd '/home/esillileu/taco/uroboros' && UV_CACHE_DIR=/tmp/uv-cache uv run python -m taco.apps.mcp.main  -    -    enabled  Unsupported
+[build 2/3] Run Codex headless in build mode

@@ -10,6 +10,10 @@ def author_task_from_blueprint(root: Path, blueprint: dict[str, object]) -> None
     assert task_path
     fm = blueprint.get("front_matter_requirements")
     assert isinstance(fm, dict)
+    scope = fm.get("scope")
+    if isinstance(scope, dict):
+        scope["out"] = ["non-goal: unrelated runtime behavior"]
+        fm["scope"] = scope
     body = "\n".join(
         [
             f"# Task: {fm.get('title', '')}",
@@ -22,6 +26,7 @@ def author_task_from_blueprint(root: Path, blueprint: dict[str, object]) -> None
             "",
             "## Scope",
             "- keep change boundary inside task blueprint constraints.",
+            "- Out of Scope: unrelated runtime behavior.",
             "",
             "## Implementation Approach",
             "1. use blueprint front matter exactly.",
@@ -42,4 +47,3 @@ def author_task_from_blueprint(root: Path, blueprint: dict[str, object]) -> None
     target = root / task_path
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(text, encoding="utf-8")
-

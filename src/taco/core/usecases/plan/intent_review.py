@@ -3,9 +3,9 @@ from __future__ import annotations
 from typing import Any
 
 from taco.core.plan import RepoState, ToolError
-from taco.core.task.pack import _task_pack_readiness_missing
 
 from .intent_pipeline import build_intent_pipeline_bundle
+from .task_lint import plan_task_lint
 
 
 def review_issues(
@@ -25,44 +25,29 @@ def review_issues(
         issues.append({"code": "taskset_fingerprint_mismatch"})
 
     generated = bundle.get("generated_tasks", [])
+    intent = bundle.get("intent", {})
+    intent_id = str(intent.get("id", "")).strip()
     if isinstance(generated, list):
         for row in generated:
             if not isinstance(row, dict):
                 continue
             task_id = str(row.get("task_id", "")).strip()
             task_path = str(row.get("path", "")).strip()
-            indexed_path = state.index.task_index.get(task_id, "")
-            if not indexed_path:
+            lint_result = plan_task_lint(
+                state,
+                {
+                    "path": task_path,
+                    "intent_id": intent_id,
+                },
+            )
+            if not bool(lint_result.get("valid", False)):
                 issues.append(
                     {
-                        "code": "task_blueprint_not_authored",
+                        "code": "task_lint_failed",
                         "task_id": task_id,
                         "path": task_path,
-                    }
-                )
-                continue
-            if task_path and indexed_path != task_path:
-                issues.append(
-                    {
-                        "code": "task_blueprint_path_mismatch",
-                        "task_id": task_id,
-                        "expected_path": task_path,
-                        "actual_path": indexed_path,
-                    }
-                )
-                continue
-            missing = _task_pack_readiness_missing(state, task_id)
-            filtered = [
-                item
-                for item in missing
-                if item not in {"task_not_found", "task_doc_missing"}
-            ]
-            if filtered:
-                issues.append(
-                    {
-                        "code": "task_not_ready_for_build",
-                        "task_id": task_id,
-                        "missing_requirements": filtered,
+                        "errors": list(lint_result.get("errors", [])),
+                        "warnings": list(lint_result.get("warnings", [])),
                     }
                 )
 

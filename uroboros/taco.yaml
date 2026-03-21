@@ -1,0 +1,51 @@
+repo:
+  root: "."
+
+docs:
+  intent: ".context/project/intents/index.md"
+  architecture: ".context/project/architecture/index.md"
+  principles: [".context/governance/code-principles.md"]
+  plan: ".context/project/plan.md"
+  doc_map: ".context/governance/doc/index.md"
+  glossary: ".context/project/architecture/schemas/glossary.md"
+  todo: [".context/project/plan.md"]
+  tasks_glob: ".context/project/tasks/T-*.md"
+  intents_glob: ".context/project/intents/I-*.md"
+
+parsing:
+  task_required_headings:
+    - "Intent"
+    - "Goal"
+    - "Scope"
+    - "Implementation Approach"
+    - "Verification Approach"
+    - "Implementation Result"
+    - "Verification Result"
+  prefer_anchors: true
+
+budget:
+  default_tokens: 1800
+  priority_order:
+    - "task.core"
+    - "task.plans"
+    - "arch.snippets"
+    - "principles.snippets"
+    - "glossary.terms"
+
+pack:
+  required_refs_by_tool:
+    plan_pack:
+      - "ARCH-INDEX"
+      - "PLAN-MAIN"
+      - "GOV-DOC-INDEX"
+    plan_intent_index:
+      - "ARCH-INDEX"
+      - "PLAN-MAIN"
+      - "GOV-DOC-INDEX"
+    task_pack:
+      - "GOV-CODE-PRINCIPLES"
+
+modules:
+  git:
+    enabled: true
+    path: ".context/governance/git/index.md"

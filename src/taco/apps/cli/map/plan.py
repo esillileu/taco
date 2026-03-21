@@ -17,6 +17,29 @@ def _map_plan_intent_action(
 ) -> tuple[str, dict[str, Any]]:
     if action == "intent.list":
         return "plan.intent.list", {}
+    if action == "intent.template":
+        return "plan.intent.template", {}
+    if action in {"intent.create-many", "intent.submit-many"}:
+        intents = options.get("intents")
+        if not isinstance(intents, list):
+            raise CliError(
+                "invalid_option",
+                "intents_json must be a json array or a path to one",
+                {"key": "intents_json"},
+            )
+        payload: dict[str, Any] = {"intents": intents}
+        plan_ref = options.get("plan_ref")
+        if plan_ref is not None:
+            if not isinstance(plan_ref, str) or not plan_ref.strip():
+                raise CliError(
+                    "invalid_option",
+                    "plan_ref must be a non-empty string",
+                    {"key": "plan_ref"},
+                )
+            payload["plan_ref"] = plan_ref.strip()
+        if action == "intent.submit-many":
+            return "plan.intent.submit_many", payload
+        return "plan.intent.create_many", payload
     if action == "intent.view":
         return "plan.intent.view", {
             "intent_id": required_str_option(options, "intent_id")
@@ -30,9 +53,27 @@ def _map_plan_intent_action(
             "intent_id": required_str_option(options, "intent_id")
         }
     if action == "intent.propose":
-        return "plan.intent.propose", {
-            "intent_id": required_str_option(options, "intent_id")
-        }
+        intent_id = options.get("intent_id")
+        if isinstance(intent_id, str) and intent_id.strip():
+            return "plan.intent.propose", {"intent_id": intent_id.strip()}
+        intent_text = options.get("intent_text")
+        if isinstance(intent_text, str) and intent_text.strip():
+            payload = {"intent_text": intent_text.strip()}
+            title = options.get("title")
+            if title is not None:
+                if not isinstance(title, str) or not title.strip():
+                    raise CliError(
+                        "invalid_option",
+                        "title must be a non-empty string when provided",
+                        {"key": "title"},
+                    )
+                payload["title"] = title.strip()
+            return "plan.intent.propose", payload
+        raise CliError(
+            "invalid_option",
+            "intent.propose requires --intent-id or --intent-text",
+            {"keys": ["intent_id", "intent_text"]},
+        )
     if action == "intent.autodesign":
         return "plan.intent.autodesign", {
             "intent_id": required_str_option(options, "intent_id"),
@@ -86,6 +127,76 @@ def _map_plan_intent_action(
 def map_plan_action(action: str, options: dict[str, Any]) -> tuple[str, dict[str, Any]]:
     if action.startswith("intent."):
         return _map_plan_intent_action(action, options)
+    if action == "mode.guide":
+        stage = options.get("stage")
+        if stage is None:
+            return "plan.mode.guide", {}
+        if not isinstance(stage, str) or not stage.strip():
+            raise CliError(
+                "invalid_option",
+                "stage must be a non-empty string",
+                {"key": "stage"},
+            )
+        return "plan.mode.guide", {"stage": stage.strip()}
+    if action == "design.submit-changes":
+        changes = options.get("changes")
+        if not isinstance(changes, list):
+            raise CliError(
+                "invalid_option",
+                "changes_json must be a json array or a path to one",
+                {"key": "changes_json"},
+            )
+        return "plan.design.submit_changes", {"changes": changes}
+    if action == "task.submit-many":
+        tasks = options.get("tasks")
+        if not isinstance(tasks, list):
+            raise CliError(
+                "invalid_option",
+                "tasks_json must be a json array or a path to one",
+                {"key": "tasks_json"},
+            )
+        return "plan.task.submit_many", {"tasks": tasks}
+    if action == "task.template":
+        payload: dict[str, Any] = {
+            "intent_id": required_str_option(options, "intent_id")
+        }
+        task_id = options.get("task_id")
+        if task_id is not None:
+            if not isinstance(task_id, str) or not task_id.strip():
+                raise CliError(
+                    "invalid_option",
+                    "task_id must be a non-empty string",
+                    {"key": "task_id"},
+                )
+            payload["task_id"] = task_id.strip()
+        return "plan.task.template", payload
+    if action == "task.sync-frontmatter":
+        payload = {
+            "intent_id": required_str_option(options, "intent_id"),
+            "path": required_str_option(options, "path"),
+        }
+        front_matter = options.get("front_matter")
+        if front_matter is not None:
+            if not isinstance(front_matter, dict):
+                raise CliError(
+                    "invalid_option",
+                    "front_matter_json must be a json object or a path to one",
+                    {"key": "front_matter_json"},
+                )
+            payload["front_matter"] = front_matter
+        return "plan.task.frontmatter.sync", payload
+    if action == "task.lint":
+        payload = {"path": required_str_option(options, "path")}
+        intent_id = options.get("intent_id")
+        if intent_id is not None:
+            if not isinstance(intent_id, str) or not intent_id.strip():
+                raise CliError(
+                    "invalid_option",
+                    "intent_id must be a non-empty string",
+                    {"key": "intent_id"},
+                )
+            payload["intent_id"] = intent_id.strip()
+        return "plan.task.lint", payload
     if action == "view":
         return "plan.view", {}
     if action == "pack":

@@ -28,6 +28,15 @@ def main(argv: list[str] | None = None, cwd: Path | None = None) -> int:
         if args.domain == "plan" and action == "intent":
             intent_action = str(getattr(args, "intent_action", "") or "")
             action = f"intent.{intent_action}"
+        if args.domain == "plan" and action == "mode":
+            mode_action = str(getattr(args, "mode_action", "") or "")
+            action = f"mode.{mode_action}"
+        if args.domain == "plan" and action == "design":
+            design_action = str(getattr(args, "design_action", "") or "")
+            action = f"design.{design_action}"
+        if args.domain == "plan" and action == "task":
+            plan_task_action = str(getattr(args, "plan_task_action", "") or "")
+            action = f"task.{plan_task_action}"
         if args.domain == "doc" and action == "section":
             doc_action = str(getattr(args, "doc_action", "") or "")
             action = f"section.{doc_action}"

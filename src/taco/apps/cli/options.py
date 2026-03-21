@@ -39,10 +39,16 @@ def _to_options(args: argparse.Namespace) -> dict[str, Any]:
         options["topic"] = args.topic
     if getattr(args, "change_type", None) is not None:
         options["change_type"] = args.change_type
+    if getattr(args, "stage", None) is not None:
+        options["stage"] = args.stage
+    if getattr(args, "plan_ref", None) is not None:
+        options["plan_ref"] = args.plan_ref
     if getattr(args, "target", None) is not None:
         options["target"] = args.target
     if getattr(args, "intent_id", None) is not None:
         options["intent_id"] = args.intent_id
+    if getattr(args, "intent_text", None) is not None:
+        options["intent_text"] = args.intent_text
     if getattr(args, "proposal_fingerprint", None) is not None:
         options["proposal_fingerprint"] = args.proposal_fingerprint
     if getattr(args, "design_fingerprint", None) is not None:
@@ -63,6 +69,30 @@ def _to_options(args: argparse.Namespace) -> dict[str, Any]:
         options["base_fingerprint"] = args.base_fingerprint
     if getattr(args, "ops_json", None) is not None:
         options["ops"] = _parse_json_option(args.ops_json, "ops_json")
+    if getattr(args, "intents_json", None) is not None:
+        options["intents"] = _parse_json_option(
+            args.intents_json,
+            "intents_json",
+            allow_file_path=True,
+        )
+    if getattr(args, "changes_json", None) is not None:
+        options["changes"] = _parse_json_option(
+            args.changes_json,
+            "changes_json",
+            allow_file_path=True,
+        )
+    if getattr(args, "tasks_json", None) is not None:
+        options["tasks"] = _parse_json_option(
+            args.tasks_json,
+            "tasks_json",
+            allow_file_path=True,
+        )
+    if getattr(args, "front_matter_json", None) is not None:
+        options["front_matter"] = _parse_json_option(
+            args.front_matter_json,
+            "front_matter_json",
+            allow_file_path=True,
+        )
     if getattr(args, "pack_json", None) is not None:
         options["pack"] = _parse_json_option(
             args.pack_json,

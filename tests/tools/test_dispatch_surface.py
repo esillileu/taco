@@ -29,6 +29,12 @@ def test_task_list_and_pack_and_targets(tmp_path: Path) -> None:
     plan_intent_listed = call_tool(state, "plan.intent.list", {})
     assert plan_intent_listed["ok"] is True
     assert plan_intent_listed["data"]["count"] == 1
+    mode_guide = call_tool(state, "plan.mode.guide", {})
+    assert mode_guide["ok"] is True
+    assert mode_guide["data"]["current_stage"] == "intent_decomposition"
+    templated = call_tool(state, "plan.intent.template", {})
+    assert templated["ok"] is True
+    assert "front_matter_required" in templated["data"]
     plan_intent_viewed = call_tool(state, "plan.intent.view", {"intent_id": "I-001"})
     assert plan_intent_viewed["ok"] is True
     assert plan_intent_viewed["data"]["intent"]["task_refs"] == ["T-005"]
@@ -62,6 +68,15 @@ def test_task_list_and_pack_and_targets(tmp_path: Path) -> None:
     assert "front_matter_requirements" in generated_task
     assert "section_requirements" in generated_task
     assert "readiness_requirements" in generated_task
+    templated_task = call_tool(state, "plan.task.template", {"intent_id": "I-001"})
+    assert templated_task["ok"] is True
+    linted_missing = call_tool(
+        state,
+        "plan.task.lint",
+        {"path": generated_task["path"], "intent_id": "I-001"},
+    )
+    assert linted_missing["ok"] is True
+    assert linted_missing["data"]["valid"] is False
     reviewed = call_tool(
         state,
         "plan.intent.review_bundle",
@@ -76,7 +91,7 @@ def test_task_list_and_pack_and_targets(tmp_path: Path) -> None:
     assert reviewed["ok"] is True
     assert reviewed["data"]["status"] == "fail"
     issue_codes = {row["code"] for row in reviewed["data"]["issues"]}
-    assert "task_blueprint_not_authored" in issue_codes
+    assert "task_lint_failed" in issue_codes
     apply_missing_approval = call_tool(
         state,
         "plan.intent.apply",
@@ -110,4 +125,3 @@ def test_task_list_and_pack_and_targets(tmp_path: Path) -> None:
     )
     assert target["ok"] is True
     assert target["data"]["heading"] == "Implementation Result"
-

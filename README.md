@@ -17,9 +17,11 @@ TACO (Task Context Orchestrator) is a local MCP server that builds deterministic
 | `task.block` | `taco task block --task-id T-003 --reason-code scope_split_required --reason "needs split"` |
 | `plan.pack` | `taco plan pack --task-id T-003 --budget-tokens 1800` |
 | `plan.intent.list` | `taco plan intent list` |
+| `plan.intent.template` | `taco plan intent template` |
+| `plan.intent.create_many` | `taco plan intent create-many --intents-json '[...]'` |
 | `plan.intent.view` | `taco plan intent view --intent-id I-001` |
 | `plan.intent.index` | `taco plan intent index --intent-id I-001 --budget-tokens 1800` |
-| `plan.intent.propose` | `taco plan intent propose --intent-id I-010 --intent-text "..." --title "..."` |
+| `plan.intent.propose` | `taco plan intent propose --intent-id I-010` |
 | `plan.intent.autodesign` | `taco plan intent autodesign --intent-id I-001` |
 | `plan.intent.generate_tasks` | `taco plan intent generate-tasks --intent-id I-001` |
 | `plan.intent.review_bundle` | `taco plan intent review-bundle --intent-id I-001 --retry-on-fail 1` |

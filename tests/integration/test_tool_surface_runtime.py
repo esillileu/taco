@@ -15,7 +15,18 @@ def test_integration_happy_path_for_all_tools(tmp_path: Path) -> None:
     assert call_tool(state, "task.list", {})["ok"] is True
     assert call_tool(state, "task.pack", {"task_id": "T-006"})["ok"] is True
     assert call_tool(state, "plan.pack", {"task_id": "T-006"})["ok"] is True
+    assert call_tool(state, "plan.mode.guide", {})["ok"] is True
+    assert call_tool(state, "plan.task.template", {"intent_id": "I-001"})["ok"] is True
+    assert (
+        call_tool(
+            state,
+            "plan.task.lint",
+            {"path": "docs/dev/tasks/T-006-integration-tests.md", "intent_id": "I-001"},
+        )["ok"]
+        is True
+    )
     assert call_tool(state, "plan.intent.list", {})["ok"] is True
+    assert call_tool(state, "plan.intent.template", {})["ok"] is True
     assert call_tool(state, "plan.intent.view", {"intent_id": "I-001"})["ok"] is True
     assert call_tool(state, "plan.intent.index", {"intent_id": "I-001"})["ok"] is True
     assert (
@@ -72,6 +83,36 @@ def test_integration_happy_path_for_all_tools(tmp_path: Path) -> None:
         )["ok"]
         is True
     )
+    created = call_tool(
+        load_repo_state(tmp_path),
+        "plan.intent.create_many",
+        {
+            "intents": [
+                {
+                    "title": "Intent from decomposition",
+                    "intent": "Capture user design as first-class planning intent.",
+                }
+            ]
+        },
+    )
+    assert created["ok"] is True
+    assert created["data"]["count"] == 1
+    submitted = call_tool(
+        load_repo_state(tmp_path),
+        "plan.intent.submit_many",
+        {
+            "intents": [
+                {
+                    "title": "Intent from submit_many",
+                    "intent": "Capture decomposition through submit path.",
+                    "scope_in": ["plan mode"],
+                    "scope_out": ["runtime coding"],
+                }
+            ]
+        },
+    )
+    assert submitted["ok"] is True
+    assert submitted["data"]["count"] == 1
     assert call_tool(state, "plan.validate", {})["ok"] is True
     assert (
         call_tool(
@@ -130,4 +171,3 @@ def test_integration_is_deterministic_for_repeated_calls(tmp_path: Path) -> None
     first = call_tool(state, "task.pack", {"task_id": "T-006"})
     second = call_tool(state, "task.pack", {"task_id": "T-006"})
     assert first == second
-

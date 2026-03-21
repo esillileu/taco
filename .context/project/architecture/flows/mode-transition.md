@@ -51,16 +51,19 @@ Define how TACO separates document planning from task execution and when the run
 
 - Goal: update design/plan/task documents safely when decisions or scope changes are required.
 - Entry surface:
+  - `plan.intent.template` to load intent format and decomposition rules
+  - `plan.intent.create_many` to create decomposed intents authored by the agent
   - `plan.intent.list` to discover active intents
   - `plan.intent.view` to inspect intent metadata and linked tasks
   - `plan.intent.index` to load plan-scoped index from intent linkage
-  - `plan.intent.propose` to normalize planning proposal
+  - `plan.intent.propose` to normalize planning proposal from an existing intent id
   - `plan.intent.autodesign` to derive design/document updates
   - `plan.intent.generate_tasks` to emit executable tasks
   - `plan.intent.review_bundle` to gate proposal/design/task consistency
   - `plan.intent.apply` to apply with explicit approval and fingerprint gate
 - Output: executable task nodes with explicit references, scope boundaries, and verification criteria.
 - Plan automation output is blueprint-level metadata; section body authoring is agent-owned.
+- Legacy `plan.intent.propose(intent_text=...)` path remains for backward compatibility and is deprecated.
 - Required checks:
   - front matter integrity and reference validity
   - impact visibility for linked architecture nodes

@@ -9,6 +9,11 @@ from .intent_helpers import (
     plan_path_from_state,
     tasks_dir_from_config,
 )
+from .intent_intake import (
+    create_many_intents,
+    ingest_natural_language_intent,
+    rebuild_state_index,
+)
 from .intent_query import plan_intent_index
 
 
@@ -88,13 +93,78 @@ def build_intent_pipeline_bundle(state: RepoState, intent_id: str) -> dict[str, 
 
 
 def plan_intent_propose(state: RepoState, args: dict[str, Any]) -> dict[str, Any]:
+    intent_text = args.get("intent_text")
+    if isinstance(intent_text, str) and intent_text.strip():
+        title = args.get("title")
+        if title is not None and not isinstance(title, str):
+            raise ToolError(
+                "invalid_input", "title must be a string", {"key": "title"}
+            )
+        created = ingest_natural_language_intent(
+            state,
+            intent_text=intent_text,
+            title=title if isinstance(title, str) else None,
+        )
+        refreshed = rebuild_state_index(state)
+        bundle = build_intent_pipeline_bundle(refreshed, created["intent_id"])
+        return {
+            "created_intent": True,
+            "intent": bundle["intent"],
+            "proposal": bundle["proposal"],
+            "proposal_fingerprint": bundle["proposal_fingerprint"],
+            "gaps": bundle["gaps"],
+            "deprecation": {
+                "code": "intent_text_propose_deprecated",
+                "message": (
+                    "Use plan.intent.template + plan.intent.create_many for natural "
+                    "language decomposition before propose."
+                ),
+            },
+        }
+
     intent_id = str(args["intent_id"])
-    bundle = build_intent_pipeline_bundle(state, intent_id)
+    try:
+        bundle = build_intent_pipeline_bundle(state, intent_id)
+    except ToolError as exc:
+        if exc.code != "intent_not_found":
+            raise
+        refreshed = rebuild_state_index(state)
+        bundle = build_intent_pipeline_bundle(refreshed, intent_id)
     return {
+        "created_intent": False,
         "intent": bundle["intent"],
         "proposal": bundle["proposal"],
         "proposal_fingerprint": bundle["proposal_fingerprint"],
         "gaps": bundle["gaps"],
+    }
+
+
+def plan_intent_create_many(state: RepoState, args: dict[str, Any]) -> dict[str, Any]:
+    result = create_many_intents(state, args)
+    refreshed = rebuild_state_index(state)
+    created = result.get("created", [])
+    mapped: list[dict[str, Any]] = []
+    if isinstance(created, list):
+        for row in created:
+            if not isinstance(row, dict):
+                continue
+            intent_id = str(row.get("intent_id", "")).strip()
+            if not intent_id:
+                continue
+            indexed = plan_intent_index(refreshed, {"intent_id": intent_id})
+            mapped.append(
+                {
+                    "intent_id": intent_id,
+                    "path": str(row.get("path", "")),
+                    "title": str(row.get("title", "")),
+                    "fingerprint": str(row.get("fingerprint", "")),
+                    "intent": indexed.get("intent", {}),
+                }
+            )
+    return {
+        "created": mapped,
+        "count": int(result.get("count", 0)),
+        "warnings": result.get("warnings", []),
     }
 
 
@@ -137,6 +207,8 @@ def plan_intent_generate_tasks(
         )
     return {
         "intent_id": intent_id,
+        "authoring_required": True,
         "generated_tasks": bundle["generated_tasks"],
         "taskset_fingerprint": bundle["taskset_fingerprint"],
+        "next_action": {"tool": "plan.task.template"},
     }

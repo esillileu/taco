@@ -30,6 +30,9 @@ package-dir = { "" = "src" }
 where = ["src"]
 include = ["taco*"]
 
+[tool.setuptools.package-data]
+taco = ["resources/templates/*.json", "resources/templates/**/*.md"]
+
 [tool.uv]
 index-url = "https://pypi.org/simple"
 

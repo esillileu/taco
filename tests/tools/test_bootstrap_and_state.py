@@ -93,3 +93,28 @@ def test_project_init_bootstrap_generates_minimal_context(tmp_path: Path) -> Non
     second = call_bootstrap_tool(tmp_path, "project.init", {})
     assert second["ok"] is False
     assert second["error"]["code"] == "init_target_exists"
+
+
+def test_project_init_bootstrap_uses_canonical_governance_templates(
+    tmp_path: Path,
+) -> None:
+    response = call_bootstrap_tool(tmp_path, "project.init", {})
+    assert response["ok"] is True
+
+    resource_dir = (
+        Path(__file__).resolve().parents[2]
+        / "src"
+        / "taco"
+        / "resources"
+        / "templates"
+        / "governance"
+    )
+    pairs = (
+        ("code-principles.md", ".context/governance/code-principles.md"),
+        ("git/index.md", ".context/governance/git/index.md"),
+        ("doc/index.md", ".context/governance/doc/index.md"),
+    )
+    for template_rel, output_rel in pairs:
+        expected = (resource_dir / template_rel).read_text(encoding="utf-8")
+        actual = (tmp_path / output_rel).read_text(encoding="utf-8")
+        assert actual == expected
